@@ -19,6 +19,8 @@ def main() -> None:
     _windows: list = []
 
     def on_rest_due() -> None:
+        if any(w.isVisible() for w in _windows):
+            return
         window = CatWindow()
         _windows.append(window)
         window.destroyed.connect(lambda: _windows.remove(window))
