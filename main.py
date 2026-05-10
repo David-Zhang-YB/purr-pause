@@ -16,8 +16,12 @@ def main() -> None:
     timer = RestTimer(interval_minutes=config["interval_minutes"])
     tray = TrayIcon(timer)  # noqa: F841  保持引用防止 GC
 
+    _windows: list = []
+
     def on_rest_due() -> None:
         window = CatWindow()
+        _windows.append(window)
+        window.destroyed.connect(lambda: _windows.remove(window))
         window.show()
 
     timer.rest_due.connect(on_rest_due)

@@ -17,7 +17,6 @@ class TrayIcon(QSystemTrayIcon):
     def __init__(self, timer, parent=None):
         super().__init__(_make_cat_icon(), parent)
         self._timer = timer
-        self._paused = False
 
         menu = QMenu()
 
@@ -39,14 +38,12 @@ class TrayIcon(QSystemTrayIcon):
         self.show()
 
     def _toggle_pause(self) -> None:
-        if self._paused:
+        if self._timer.is_paused:
             self._timer.resume()
             self._pause_action.setText("⏸ 暂停")
-            self._paused = False
         else:
             self._timer.pause()
             self._pause_action.setText("▶ 继续")
-            self._paused = True
 
     def _open_settings(self) -> None:
         from settings import SettingsDialog, load_config, save_config

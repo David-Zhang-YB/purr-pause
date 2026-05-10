@@ -94,6 +94,10 @@ class CatWindow(QWidget):
             self._timer.stop()
             self._fade_out()
 
+    def closeEvent(self, event) -> None:
+        self._timer.stop()
+        super().closeEvent(event)
+
     def _fade_out(self) -> None:
         self._anim = QPropertyAnimation(self, b"windowOpacity")
         self._anim.setDuration(500)
