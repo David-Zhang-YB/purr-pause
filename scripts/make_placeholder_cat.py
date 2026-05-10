@@ -1,9 +1,10 @@
+import os
 from PIL import Image, ImageDraw
 from pathlib import Path
 
 def create_cat_gif():
     frames = []
-    for blink in (False, False, True, False):
+    for frame_idx, blink in enumerate((False, False, True, False)):
         img = Image.new("RGBA", (200, 200), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)
         # 头部
@@ -32,9 +33,24 @@ def create_cat_gif():
         frames.append(img)
 
     out = Path(__file__).parent.parent / "assets" / "cat.gif"
-    frames[0].save(
-        out, save_all=True, append_images=frames[1:],
-        duration=400, loop=0, disposal=2
+    os.makedirs(out.parent, exist_ok=True)
+    # Convert RGBA frames to palette mode for correct GIF encoding.
+    # First convert to RGB to flatten transparency, then add a unique 1-pixel
+    # marker per frame at position (0,0) so Pillow's GIF encoder does not merge
+    # identical consecutive frames (it accumulates duration instead of emitting
+    # a new frame when pixels are identical).
+    rgb_frames = [f.convert("RGB") for f in frames]
+    for i, f in enumerate(rgb_frames):
+        f.putpixel((0, 0), (i, i, i))  # unique corner pixel, visually imperceptible
+    p_frames = [f.convert("P", palette=Image.Palette.ADAPTIVE, colors=256) for f in rgb_frames]
+    p_frames[0].save(
+        out,
+        save_all=True,
+        append_images=p_frames[1:],
+        duration=400,
+        loop=0,
+        disposal=2,
+        optimize=False,
     )
     print(f"Created {out}")
 
