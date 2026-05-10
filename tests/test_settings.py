@@ -41,3 +41,32 @@ def test_save_config_persists(cfg):
     import settings
     raw = json.loads(settings.CONFIG_PATH.read_text(encoding="utf-8"))
     assert raw["interval_minutes"] == 15
+
+
+def test_settings_dialog_shows_current_interval(qtbot):
+    from settings import SettingsDialog
+    dialog = SettingsDialog(current_interval=25)
+    qtbot.addWidget(dialog)
+
+    assert dialog.spinbox.value() == 25
+
+
+def test_settings_dialog_emits_interval_changed_on_save(qtbot):
+    from settings import SettingsDialog
+    dialog = SettingsDialog(current_interval=20)
+    qtbot.addWidget(dialog)
+    dialog.spinbox.setValue(35)
+
+    with qtbot.waitSignal(dialog.interval_changed, timeout=500) as blocker:
+        dialog._save()
+
+    assert blocker.args == [35]
+
+
+def test_settings_dialog_cancel_does_not_emit(qtbot):
+    from settings import SettingsDialog
+    dialog = SettingsDialog(current_interval=20)
+    qtbot.addWidget(dialog)
+
+    with qtbot.assertNotEmitted(dialog.interval_changed, wait=100):
+        dialog.reject()
