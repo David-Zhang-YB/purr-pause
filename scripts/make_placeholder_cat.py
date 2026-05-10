@@ -4,7 +4,7 @@ from pathlib import Path
 
 def create_cat_gif():
     frames = []
-    for frame_idx, blink in enumerate((False, False, True, False)):
+    for blink in (False, False, True, False):
         img = Image.new("RGBA", (200, 200), (0, 0, 0, 0))
         d = ImageDraw.Draw(img)
         # 头部
