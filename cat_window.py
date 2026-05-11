@@ -69,7 +69,14 @@ class CatWindow(QWidget):
                 else ASSETS_DIR / "cat.gif"
             )
             self._movie = QMovie(str(gif_path))
-            self._movie.setScaledSize(QSize(DISPLAY_W, DISPLAY_H))
+            self._movie.jumpToFrame(0)
+            nat = self._movie.currentImage().size()
+            if nat.isValid() and nat.width() > 0 and nat.height() > 0:
+                scale = min(DISPLAY_W / nat.width(), DISPLAY_H / nat.height())
+                scaled = QSize(int(nat.width() * scale), int(nat.height() * scale))
+            else:
+                scaled = QSize(DISPLAY_W, DISPLAY_H)
+            self._movie.setScaledSize(scaled)
             gif_label.setMovie(self._movie)
             self._movie.start()
 
