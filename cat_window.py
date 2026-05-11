@@ -1,17 +1,20 @@
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, QTimer, QPropertyAnimation
-from PyQt6.QtGui import QFont, QMovie
+from PyQt6.QtCore import Qt, QSize, QTimer, QPropertyAnimation
+from PyQt6.QtGui import QFont, QMovie, QPixmap
 from PyQt6.QtWidgets import (
     QApplication, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
 ASSETS_DIR = Path(__file__).parent / "assets"
+DISPLAY_W, DISPLAY_H = 260, 280
+_STATIC_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 
 
 class CatWindow(QWidget):
-    def __init__(self):
+    def __init__(self, image_path: str = ""):
         super().__init__()
+        self._image_path = image_path
         self._countdown = 20
         self._anim = None  # 防止 GC
         self._movie = None  # 防止 GC
@@ -47,13 +50,28 @@ class CatWindow(QWidget):
         close_btn.clicked.connect(self.close)
         close_row.addWidget(close_btn)
 
-        # 猫咪 GIF
+        # 猫咪图片 / GIF
         gif_label = QLabel()
         gif_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        gif_path = str(ASSETS_DIR / "cat.gif")
-        self._movie = QMovie(gif_path)
-        gif_label.setMovie(self._movie)
-        self._movie.start()
+        gif_label.setFixedSize(DISPLAY_W, DISPLAY_H)
+
+        custom = Path(self._image_path) if self._image_path else Path()
+        if custom.exists() and custom.suffix.lower() in _STATIC_EXTS:
+            px = QPixmap(str(custom)).scaled(
+                DISPLAY_W, DISPLAY_H,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            gif_label.setPixmap(px)
+        else:
+            gif_path = (
+                custom if custom.exists() and custom.suffix.lower() == ".gif"
+                else ASSETS_DIR / "cat.gif"
+            )
+            self._movie = QMovie(str(gif_path))
+            self._movie.setScaledSize(QSize(DISPLAY_W, DISPLAY_H))
+            gif_label.setMovie(self._movie)
+            self._movie.start()
 
         # 倒计时文字
         self._countdown_label = QLabel(self._countdown_text())

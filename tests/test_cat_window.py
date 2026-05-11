@@ -32,3 +32,13 @@ def test_cat_window_closes_after_countdown_zero(qtbot):
 
     # 动画 500ms 后关闭，等待最多 1000ms
     qtbot.waitUntil(lambda: not window.isVisible(), timeout=1000)
+
+
+def test_cat_window_with_empty_path_uses_default(qtbot):
+    window = CatWindow(image_path="")
+    qtbot.addWidget(window)
+
+
+def test_cat_window_with_nonexistent_path_falls_back(qtbot):
+    window = CatWindow(image_path="/nonexistent/path/cat.gif")
+    qtbot.addWidget(window)

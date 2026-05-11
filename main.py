@@ -21,7 +21,8 @@ def main() -> None:
     def on_rest_due() -> None:
         if any(w.isVisible() for w in _windows):
             return
-        window = CatWindow()
+        cfg = load_config()
+        window = CatWindow(image_path=cfg.get("cat_image_path", ""))
         _windows.append(window)
         window.destroyed.connect(lambda: _windows.remove(window))
         window.show()

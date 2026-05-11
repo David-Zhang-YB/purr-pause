@@ -21,17 +21,19 @@ def save_config(data: dict) -> None:
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
-    QDialog, QHBoxLayout, QLabel, QPushButton, QSpinBox, QVBoxLayout,
+    QDialog, QFileDialog, QHBoxLayout, QLabel, QPushButton, QSpinBox, QVBoxLayout,
 )
 
 
 class SettingsDialog(QDialog):
     interval_changed = pyqtSignal(int)
+    image_path_changed = pyqtSignal(str)
 
-    def __init__(self, current_interval: int, parent=None):
+    def __init__(self, current_interval: int, current_image_path: str = "", parent=None):
         super().__init__(parent)
+        self._image_path = current_image_path
         self.setWindowTitle("Purr Pause 设置")
-        self.setFixedSize(300, 150)
+        self.setFixedSize(360, 180)
 
         layout = QVBoxLayout()
 
@@ -44,6 +46,19 @@ class SettingsDialog(QDialog):
         row.addWidget(self.spinbox)
         layout.addLayout(row)
 
+        img_row = QHBoxLayout()
+        img_row.addWidget(QLabel("猫咪图片："))
+        from pathlib import Path as _Path
+        self._img_label = QLabel(
+            _Path(current_image_path).name if current_image_path else "（默认）"
+        )
+        self._img_label.setStyleSheet("color: grey;")
+        img_row.addWidget(self._img_label, 1)
+        pick_btn = QPushButton("选择…")
+        pick_btn.clicked.connect(self._pick_image)
+        img_row.addWidget(pick_btn)
+        layout.addLayout(img_row)
+
         buttons = QHBoxLayout()
         save_btn = QPushButton("保存")
         save_btn.clicked.connect(self._save)
@@ -55,6 +70,17 @@ class SettingsDialog(QDialog):
 
         self.setLayout(layout)
 
+    def _pick_image(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, "选择猫咪图片", "",
+            "图片文件 (*.gif *.png *.jpg *.jpeg *.webp)",
+        )
+        if path:
+            from pathlib import Path as _Path
+            self._image_path = path
+            self._img_label.setText(_Path(path).name)
+
     def _save(self) -> None:
         self.interval_changed.emit(self.spinbox.value())
+        self.image_path_changed.emit(self._image_path)
         self.accept()

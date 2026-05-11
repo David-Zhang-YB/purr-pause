@@ -46,11 +46,15 @@ class TrayIcon(QSystemTrayIcon):
             self._pause_action.setText("▶ 继续")
 
     def _open_settings(self) -> None:
-        from settings import SettingsDialog, load_config, save_config
+        from settings import SettingsDialog, load_config
 
         config = load_config()
-        dialog = SettingsDialog(current_interval=config["interval_minutes"])
+        dialog = SettingsDialog(
+            current_interval=config["interval_minutes"],
+            current_image_path=config.get("cat_image_path", ""),
+        )
         dialog.interval_changed.connect(self._on_interval_changed)
+        dialog.image_path_changed.connect(self._on_image_path_changed)
         dialog.exec()
 
     def _on_interval_changed(self, minutes: int) -> None:
@@ -60,6 +64,13 @@ class TrayIcon(QSystemTrayIcon):
         config["interval_minutes"] = minutes
         save_config(config)
         self._timer.reset(minutes)
+
+    def _on_image_path_changed(self, path: str) -> None:
+        from settings import load_config, save_config
+
+        config = load_config()
+        config["cat_image_path"] = path
+        save_config(config)
 
     def _show_about(self) -> None:
         QMessageBox.about(
