@@ -42,3 +42,10 @@ def test_cat_window_with_empty_path_uses_default(qtbot):
 def test_cat_window_with_nonexistent_path_falls_back(qtbot):
     window = CatWindow(image_path="/nonexistent/path/cat.gif")
     qtbot.addWidget(window)
+
+
+def test_cat_window_countdown_starts_at_custom_duration(qtbot):
+    window = CatWindow(rest_duration=15)
+    qtbot.addWidget(window)
+
+    assert window._countdown == 15

@@ -1,4 +1,5 @@
 {
   "interval_minutes": 20,
+  "rest_duration_seconds": 20,
   "cat_image_path": ""
 }

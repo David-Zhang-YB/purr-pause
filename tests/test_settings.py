@@ -89,3 +89,23 @@ def test_settings_dialog_shows_current_image_name(qtbot):
     qtbot.addWidget(dialog)
 
     assert dialog._img_label.text() == "nyan.gif"
+
+
+def test_settings_dialog_shows_current_rest_duration(qtbot):
+    from settings import SettingsDialog
+    dialog = SettingsDialog(current_interval=20, current_rest_duration=30)
+    qtbot.addWidget(dialog)
+
+    assert dialog.rest_spinbox.value() == 30
+
+
+def test_settings_dialog_emits_rest_duration_changed_on_save(qtbot):
+    from settings import SettingsDialog
+    dialog = SettingsDialog(current_interval=20, current_rest_duration=20)
+    qtbot.addWidget(dialog)
+    dialog.rest_spinbox.setValue(35)
+
+    with qtbot.waitSignal(dialog.rest_duration_changed, timeout=500) as blocker:
+        dialog._save()
+
+    assert blocker.args == [35]

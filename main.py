@@ -22,7 +22,10 @@ def main() -> None:
         if any(w.isVisible() for w in _windows):
             return
         cfg = load_config()
-        window = CatWindow(image_path=cfg.get("cat_image_path", ""))
+        window = CatWindow(
+            image_path=cfg.get("cat_image_path", ""),
+            rest_duration=cfg.get("rest_duration_seconds", 20),
+        )
         _windows.append(window)
         window.destroyed.connect(lambda: _windows.remove(window))
         window.show()

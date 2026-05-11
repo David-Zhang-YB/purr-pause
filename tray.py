@@ -51,9 +51,11 @@ class TrayIcon(QSystemTrayIcon):
         config = load_config()
         dialog = SettingsDialog(
             current_interval=config["interval_minutes"],
+            current_rest_duration=config.get("rest_duration_seconds", 20),
             current_image_path=config.get("cat_image_path", ""),
         )
         dialog.interval_changed.connect(self._on_interval_changed)
+        dialog.rest_duration_changed.connect(self._on_rest_duration_changed)
         dialog.image_path_changed.connect(self._on_image_path_changed)
         dialog.exec()
 
@@ -64,6 +66,13 @@ class TrayIcon(QSystemTrayIcon):
         config["interval_minutes"] = minutes
         save_config(config)
         self._timer.reset(minutes)
+
+    def _on_rest_duration_changed(self, seconds: int) -> None:
+        from settings import load_config, save_config
+
+        config = load_config()
+        config["rest_duration_seconds"] = seconds
+        save_config(config)
 
     def _on_image_path_changed(self, path: str) -> None:
         from settings import load_config, save_config

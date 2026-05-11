@@ -12,10 +12,10 @@ _STATIC_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 
 
 class CatWindow(QWidget):
-    def __init__(self, image_path: str = ""):
+    def __init__(self, image_path: str = "", rest_duration: int = 20):
         super().__init__()
         self._image_path = image_path
-        self._countdown = 20
+        self._countdown = rest_duration
         self._anim = None  # 防止 GC
         self._movie = None  # 防止 GC
         self._setup_window()
