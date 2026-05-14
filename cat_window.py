@@ -4,17 +4,40 @@ from PyQt6.QtCore import (
     Qt, QSize, QTimer, QPropertyAnimation,
     QParallelAnimationGroup, QEasingCurve, QPoint,
 )
-from PyQt6.QtGui import QFont, QMovie, QPixmap, QPainter, QColor
+from PyQt6.QtGui import (
+    QColor, QFont, QFontDatabase, QLinearGradient, QMovie, QPixmap, QPainter,
+)
 from PyQt6.QtWidgets import (
-    QApplication, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
+    QApplication, QGraphicsDropShadowEffect,
+    QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
-ASSETS_DIR = Path(__file__).parent / "assets"
-THUMB_SIZE  = 80
-CARD_W      = 360
-CARD_H      = 120
-MARGIN_EDGE = 16
-_STATIC_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
+ASSETS_DIR    = Path(__file__).parent / "assets"
+THUMB_SIZE    = 80
+CARD_W        = 360
+CARD_H        = 120
+SHADOW_MARGIN = 20          # transparent border around card for shadow bleed
+WIN_W         = CARD_W + 2 * SHADOW_MARGIN
+WIN_H         = CARD_H + 2 * SHADOW_MARGIN
+MARGIN_EDGE   = 16          # gap between card edge and screen edge
+_STATIC_EXTS  = {".png", ".jpg", ".jpeg", ".webp"}
+
+_NOTO_FAMILY: str | None = None
+
+
+def _ensure_font() -> str:
+    """Load Noto Sans SC variable font once; fall back to Microsoft YaHei."""
+    global _NOTO_FAMILY
+    if _NOTO_FAMILY is None:
+        font_path = ASSETS_DIR / "fonts" / "NotoSansSC[wght].ttf"
+        if font_path.exists():
+            fid = QFontDatabase.addApplicationFont(str(font_path))
+            families = QFontDatabase.applicationFontFamilies(fid)
+            if families:
+                _NOTO_FAMILY = families[0]
+        if _NOTO_FAMILY is None:
+            _NOTO_FAMILY = "Microsoft YaHei"
+    return _NOTO_FAMILY
 
 
 class _ProgressBar(QWidget):
@@ -32,14 +55,19 @@ class _ProgressBar(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setPen(Qt.PenStyle.NoPen)
+        # Track
         p.setBrush(QColor(255, 255, 255, 38))
         p.drawRoundedRect(self.rect(), 2, 2)
+        # Amber gradient fill
         ratio = self._remaining / self._total if self._total > 0 else 0
         fill_w = int(self.width() * ratio)
         if fill_w > 0:
             r = self.rect()
             r.setWidth(fill_w)
-            p.setBrush(QColor(255, 255, 255, 178))
+            grad = QLinearGradient(0, 0, fill_w, 0)
+            grad.setColorAt(0.0, QColor(0xFF, 0x9F, 0x0A))  # #FF9F0A
+            grad.setColorAt(1.0, QColor(0xFF, 0xCC, 0x02))  # #FFCC02
+            p.setBrush(grad)
             p.drawRoundedRect(r, 2, 2)
         p.end()
 
@@ -63,20 +91,24 @@ class CatWindow(QWidget):
             | Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setFixedSize(CARD_W, CARD_H)
+        self.setFixedSize(WIN_W, WIN_H)
         screen = QApplication.primaryScreen().availableGeometry()
-        self._target_x = screen.right() - CARD_W - MARGIN_EDGE
-        self._target_y = screen.top() + MARGIN_EDGE
-        self.move(self._target_x, screen.top() - CARD_H)
+        # card's visible right/top edges land at MARGIN_EDGE from screen edges
+        self._target_x = screen.right() - CARD_W - MARGIN_EDGE - SHADOW_MARGIN
+        self._target_y = screen.top() + MARGIN_EDGE - SHADOW_MARGIN
+        self.move(self._target_x, screen.top() - WIN_H)
         self.setWindowOpacity(0.0)
 
     def _setup_ui(self) -> None:
-        # ── 左侧：猫咪缩略图 ──────────────────────────────────
+        fam = _ensure_font()
+
+        # ── 左侧：猫咪缩略图（圆形）──────────────────────────
         gif_label = QLabel()
         gif_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         gif_label.setFixedSize(THUMB_SIZE, THUMB_SIZE)
         gif_label.setStyleSheet(
-            "border-radius: 10px; background: rgba(255,255,255,0.05);"
+            f"border-radius: {THUMB_SIZE // 2}px;"
+            " background: rgba(255,255,255,0.05);"
         )
 
         custom = Path(self._image_path) if self._image_path else Path()
@@ -110,8 +142,11 @@ class CatWindow(QWidget):
         top_row.setContentsMargins(0, 0, 0, 0)
         top_row.setSpacing(0)
 
+        f_app = QFont(fam, 10)
+        f_app.setWeight(QFont.Weight.Light)
+        f_app.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 0.6)
         app_label = QLabel("Purr Pause")
-        app_label.setFont(QFont("Microsoft YaHei", 10))
+        app_label.setFont(f_app)
         app_label.setStyleSheet("color: #8E8E93;")
 
         close_btn = QPushButton("×")
@@ -128,8 +163,10 @@ class CatWindow(QWidget):
         top_row.addWidget(close_btn)
 
         # 行 2：主文字
+        f_main = QFont(fam, 13)
+        f_main.setWeight(QFont.Weight.Medium)
         msg_label = QLabel("看向 20 英尺外 · 休息一下")
-        msg_label.setFont(QFont("Microsoft YaHei", 13))
+        msg_label.setFont(f_main)
         msg_label.setStyleSheet("color: white;")
 
         # 行 3：倒计时 + 进度条
@@ -137,8 +174,10 @@ class CatWindow(QWidget):
         bottom_row.setContentsMargins(0, 0, 0, 0)
         bottom_row.setSpacing(8)
 
+        f_time = QFont(fam, 11)
+        f_time.setWeight(QFont.Weight.Light)
         self._time_label = QLabel(f"还剩 {self._countdown} 秒")
-        self._time_label.setFont(QFont("Microsoft YaHei", 11))
+        self._time_label.setFont(f_time)
         self._time_label.setStyleSheet("color: #8E8E93;")
 
         self._progress_bar = _ProgressBar(total=self._countdown)
@@ -155,6 +194,7 @@ class CatWindow(QWidget):
 
         # ── 卡片容器 ──────────────────────────────────────────
         inner = QWidget()
+        inner.setFixedSize(CARD_W, CARD_H)
         inner_layout = QHBoxLayout()
         inner_layout.setContentsMargins(12, 12, 12, 12)
         inner_layout.setSpacing(12)
@@ -165,25 +205,34 @@ class CatWindow(QWidget):
             "background: rgba(28, 28, 30, 0.92); border-radius: 16px;"
         )
 
+        # ── 投影阴影 ──────────────────────────────────────────
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(16)
+        shadow.setOffset(0, 6)
+        shadow.setColor(QColor(0, 0, 0, 120))
+        inner.setGraphicsEffect(shadow)
+
+        # ── 外层透明容器（为阴影留白） ─────────────────────────
         outer = QVBoxLayout()
-        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setContentsMargins(SHADOW_MARGIN, SHADOW_MARGIN, SHADOW_MARGIN, SHADOW_MARGIN)
+        outer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         outer.addWidget(inner)
         self.setLayout(outer)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
         screen = QApplication.primaryScreen().availableGeometry()
-        start_pos = QPoint(self._target_x, screen.top() - CARD_H)
+        start_pos = QPoint(self._target_x, screen.top() - WIN_H)
         end_pos   = QPoint(self._target_x, self._target_y)
 
         pos_anim = QPropertyAnimation(self, b"pos")
-        pos_anim.setDuration(350)
+        pos_anim.setDuration(420)
         pos_anim.setStartValue(start_pos)
         pos_anim.setEndValue(end_pos)
-        pos_anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+        pos_anim.setEasingCurve(QEasingCurve.Type.OutBack)  # spring bounce
 
         opacity_anim = QPropertyAnimation(self, b"windowOpacity")
-        opacity_anim.setDuration(350)
+        opacity_anim.setDuration(280)
         opacity_anim.setStartValue(0.0)
         opacity_anim.setEndValue(1.0)
 
