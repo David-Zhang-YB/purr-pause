@@ -1,11 +1,15 @@
 import sys
+from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication
 
+from cat_anim_window import CatAnimWindow
 from cat_window import CatWindow
 from settings import load_config
 from timer import RestTimer
 from tray import TrayIcon
+
+_ASSET_DIR = Path(__file__).parent / "assets"
 
 
 def main() -> None:
@@ -28,6 +32,15 @@ def main() -> None:
         )
         _windows.append(window)
         window.destroyed.connect(lambda: _windows.remove(window))
+
+        walk_in  = _ASSET_DIR / "cat_walk_in.mp4"
+        idle     = _ASSET_DIR / "cat_idle.mp4"
+        walk_out = _ASSET_DIR / "cat_walk_out.mp4"
+        if all(p.exists() for p in (walk_in, idle, walk_out)):
+            cat_anim = CatAnimWindow(str(walk_in), str(idle), str(walk_out))
+            window.countdown_finished.connect(cat_anim.start_walk_out)
+            cat_anim.show()
+
         window.show()
 
     timer.rest_due.connect(on_rest_due)

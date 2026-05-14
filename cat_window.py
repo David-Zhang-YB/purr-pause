@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from PyQt6.QtCore import (
-    Qt, QSize, QTimer, QPropertyAnimation, pyqtProperty,
+    Qt, QSize, QTimer, QPropertyAnimation, pyqtProperty, pyqtSignal,
     QParallelAnimationGroup, QSequentialAnimationGroup,
     QEasingCurve, QPoint, QRectF,
 )
@@ -146,6 +146,8 @@ class _GlowCard(QWidget):
 
 
 class CatWindow(QWidget):
+    countdown_finished = pyqtSignal()
+
     def __init__(self, image_path: str = "", rest_duration: int = 20):
         super().__init__()
         self._image_path = image_path
@@ -321,6 +323,7 @@ class CatWindow(QWidget):
         self._time_label.setText(f"还剩 {self._countdown} 秒")
         self._progress_bar.set_remaining(self._countdown)
         if self._countdown <= 0:
+            self.countdown_finished.emit()
             self._timer.stop()
             self._fade_out()
 
