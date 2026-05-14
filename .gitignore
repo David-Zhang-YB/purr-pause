@@ -6,3 +6,6 @@ dist/
 build/
 *.egg-info/
 .venv/
+.claude/
+.superpowers/
+assets/fonts/SourceHanSansSC-*.otf
