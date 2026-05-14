@@ -120,6 +120,8 @@ class _GlowCard(QWidget):
         p.end()
 
     def start_breathing(self) -> None:
+        if self._anim_group is not None:
+            self._anim_group.stop()
         fwd = QPropertyAnimation(self, b"glow_intensity")
         fwd.setDuration(1200)
         fwd.setStartValue(0.4)
@@ -132,7 +134,7 @@ class _GlowCard(QWidget):
         bwd.setEndValue(0.4)
         bwd.setEasingCurve(QEasingCurve.Type.InOutSine)
 
-        self._anim_group = QSequentialAnimationGroup()
+        self._anim_group = QSequentialAnimationGroup(self)
         self._anim_group.addAnimation(fwd)
         self._anim_group.addAnimation(bwd)
         self._anim_group.setLoopCount(-1)
