@@ -1,14 +1,16 @@
 from pathlib import Path
 
 from PyQt6.QtCore import (
-    Qt, QSize, QTimer, QPropertyAnimation,
-    QParallelAnimationGroup, QEasingCurve, QPoint,
+    Qt, QSize, QTimer, QPropertyAnimation, pyqtProperty,
+    QParallelAnimationGroup, QSequentialAnimationGroup,
+    QEasingCurve, QPoint, QRectF,
 )
 from PyQt6.QtGui import (
-    QColor, QFont, QFontDatabase, QLinearGradient, QMovie, QPixmap, QPainter,
+    QBrush, QColor, QFont, QFontDatabase, QLinearGradient,
+    QMovie, QPixmap, QPainter,
 )
 from PyQt6.QtWidgets import (
-    QApplication, QGraphicsDropShadowEffect,
+    QApplication,
     QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
@@ -20,6 +22,7 @@ SHADOW_MARGIN = 20          # transparent border around card for shadow bleed
 WIN_W         = CARD_W + 2 * SHADOW_MARGIN
 WIN_H         = CARD_H + 2 * SHADOW_MARGIN
 MARGIN_EDGE   = 16          # gap between card edge and screen edge
+GLOW_MARGIN   = 12          # max glow spread (px); must be ≤ SHADOW_MARGIN
 _STATIC_EXTS  = {".png", ".jpg", ".jpeg", ".webp"}
 
 _NOTO_FAMILY: str | None = None
@@ -72,6 +75,74 @@ class _ProgressBar(QWidget):
         p.end()
 
 
+class _GlowCard(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._glow: float = 0.4
+        self._anim_group: QSequentialAnimationGroup | None = None
+        self.setFixedSize(CARD_W + 2 * GLOW_MARGIN, CARD_H + 2 * GLOW_MARGIN)
+
+    @pyqtProperty(float)
+    def glow_intensity(self) -> float:
+        return self._glow
+
+    @glow_intensity.setter
+    def glow_intensity(self, value: float) -> None:
+        self._glow = value
+        self.update()
+
+    def paintEvent(self, event) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(Qt.PenStyle.NoPen)
+
+        card_r = QRectF(self.rect()).adjusted(
+            GLOW_MARGIN, GLOW_MARGIN, -GLOW_MARGIN, -GLOW_MARGIN
+        )
+
+        # Outer glow layers (amber, alpha scales with glow_intensity)
+        for spread, base_alpha in ((12, 40), (7, 65), (3, 90)):
+            gr = card_r.adjusted(-spread, -spread, spread, spread)
+            p.setBrush(QColor(0xFF, 0x9F, 0x0A, int(base_alpha * self._glow)))
+            p.drawRoundedRect(gr, 16 + spread * 0.6, 16 + spread * 0.6)
+
+        # Gradient border fill (amber → gold), leaves ~2px ring after fill is drawn on top
+        grad = QLinearGradient(card_r.topLeft(), card_r.bottomRight())
+        grad.setColorAt(0.0, QColor(0xFF, 0x9F, 0x0A))
+        grad.setColorAt(1.0, QColor(0xFF, 0xCC, 0x02))
+        p.setBrush(QBrush(grad))
+        p.drawRoundedRect(card_r, 16.0, 16.0)
+
+        # Inner card fill covers border, leaving a ~2px gradient ring visible
+        p.setBrush(QColor(22, 22, 26, 250))
+        p.drawRoundedRect(card_r.adjusted(2, 2, -2, -2), 14.0, 14.0)
+
+        p.end()
+
+    def start_breathing(self) -> None:
+        fwd = QPropertyAnimation(self, b"glow_intensity")
+        fwd.setDuration(1200)
+        fwd.setStartValue(0.4)
+        fwd.setEndValue(1.0)
+        fwd.setEasingCurve(QEasingCurve.Type.InOutSine)
+
+        bwd = QPropertyAnimation(self, b"glow_intensity")
+        bwd.setDuration(1200)
+        bwd.setStartValue(1.0)
+        bwd.setEndValue(0.4)
+        bwd.setEasingCurve(QEasingCurve.Type.InOutSine)
+
+        self._anim_group = QSequentialAnimationGroup()
+        self._anim_group.addAnimation(fwd)
+        self._anim_group.addAnimation(bwd)
+        self._anim_group.setLoopCount(-1)
+        self._anim_group.start()
+
+    def stop_breathing(self) -> None:
+        if self._anim_group is not None:
+            self._anim_group.stop()
+
+
 class CatWindow(QWidget):
     def __init__(self, image_path: str = "", rest_duration: int = 20):
         super().__init__()
@@ -80,6 +151,7 @@ class CatWindow(QWidget):
         self._anim = None
         self._movie = None
         self._entry_anim = None
+        self._glow_card: _GlowCard | None = None
         self._setup_window()
         self._setup_ui()
         self._start_countdown()
@@ -192,31 +264,26 @@ class CatWindow(QWidget):
         right_col.addWidget(msg_label)
         right_col.addLayout(bottom_row)
 
-        # ── 卡片容器 ──────────────────────────────────────────
-        inner = QWidget()
-        inner.setFixedSize(CARD_W, CARD_H)
+        # ── 卡片容器（_GlowCard 包含发光边框 + 内填充） ─────────
+        self._glow_card = _GlowCard()
         inner_layout = QHBoxLayout()
-        inner_layout.setContentsMargins(12, 12, 12, 12)
+        inner_layout.setContentsMargins(
+            GLOW_MARGIN + 12, GLOW_MARGIN + 12,
+            GLOW_MARGIN + 12, GLOW_MARGIN + 12,
+        )
         inner_layout.setSpacing(12)
         inner_layout.addWidget(gif_label)
         inner_layout.addLayout(right_col)
-        inner.setLayout(inner_layout)
-        inner.setStyleSheet(
-            "background: rgba(28, 28, 30, 0.92); border-radius: 16px;"
-        )
+        self._glow_card.setLayout(inner_layout)
 
-        # ── 投影阴影 ──────────────────────────────────────────
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(16)
-        shadow.setOffset(0, 6)
-        shadow.setColor(QColor(0, 0, 0, 120))
-        inner.setGraphicsEffect(shadow)
-
-        # ── 外层透明容器（为阴影留白） ─────────────────────────
+        # ── 外层透明容器（为发光留白） ────────────────────────────
         outer = QVBoxLayout()
-        outer.setContentsMargins(SHADOW_MARGIN, SHADOW_MARGIN, SHADOW_MARGIN, SHADOW_MARGIN)
+        outer.setContentsMargins(
+            SHADOW_MARGIN - GLOW_MARGIN, SHADOW_MARGIN - GLOW_MARGIN,
+            SHADOW_MARGIN - GLOW_MARGIN, SHADOW_MARGIN - GLOW_MARGIN,
+        )
         outer.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        outer.addWidget(inner)
+        outer.addWidget(self._glow_card)
         self.setLayout(outer)
 
     def showEvent(self, event) -> None:
@@ -240,6 +307,7 @@ class CatWindow(QWidget):
         self._entry_anim.addAnimation(pos_anim)
         self._entry_anim.addAnimation(opacity_anim)
         self._entry_anim.start()
+        self._entry_anim.finished.connect(self._glow_card.start_breathing)
 
     def _start_countdown(self) -> None:
         self._timer = QTimer()
@@ -258,11 +326,15 @@ class CatWindow(QWidget):
         self._timer.stop()
         if self._entry_anim is not None:
             self._entry_anim.stop()
+        if self._glow_card is not None:
+            self._glow_card.stop_breathing()
         super().closeEvent(event)
 
     def _fade_out(self) -> None:
         if self._entry_anim is not None:
             self._entry_anim.stop()
+        if self._glow_card is not None:
+            self._glow_card.stop_breathing()
         self._anim = QPropertyAnimation(self, b"windowOpacity")
         self._anim.setDuration(500)
         self._anim.setStartValue(1.0)
