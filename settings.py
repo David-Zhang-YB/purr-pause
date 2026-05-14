@@ -79,7 +79,7 @@ class SettingsDialog(QDialog):
         self.spinbox = QSpinBox()
         self.spinbox.setRange(5, 60)
         self.spinbox.setSingleStep(5)
-        self.spinbox.setValue(current_interval)
+        self.spinbox.setValue(int(current_interval))
         interval_row.addWidget(self.spinbox)
         params_layout.addLayout(interval_row)
 
@@ -88,7 +88,7 @@ class SettingsDialog(QDialog):
         self.rest_spinbox = QSpinBox()
         self.rest_spinbox.setRange(10, 60)
         self.rest_spinbox.setSingleStep(5)
-        self.rest_spinbox.setValue(current_rest_duration)
+        self.rest_spinbox.setValue(int(current_rest_duration))
         rest_row.addWidget(self.rest_spinbox)
         params_layout.addLayout(rest_row)
 
