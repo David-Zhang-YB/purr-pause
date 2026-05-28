@@ -24,9 +24,10 @@ def test_resource_path_uses_meipass_when_frozen(monkeypatch, tmp_path):
 def test_user_data_dir_in_source_mode_returns_project_root(monkeypatch):
     """In source mode (sys.frozen unset), user_data_dir() returns the project directory."""
     monkeypatch.setattr(sys, "frozen", False, raising=False)
+    import paths
     from paths import user_data_dir
     result = user_data_dir()
-    assert (result / "main.py").exists() or result.name in {"Purr_Pause", "Purr Pause"}
+    assert result == Path(paths.__file__).parent
 
 
 def test_user_data_dir_when_frozen_uses_appdata_and_creates_dir(monkeypatch, tmp_path):

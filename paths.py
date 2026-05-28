@@ -20,7 +20,8 @@ def user_data_dir() -> Path:
     Source mode: the project root (so dev experience matches existing behavior).
     """
     if getattr(sys, "frozen", False):
-        root = Path(os.environ.get("APPDATA", Path.home()))
+        appdata = os.environ.get("APPDATA")
+        root = Path(appdata) if appdata else Path.home() / "AppData" / "Roaming"
         d = root / "PurrPause"
         d.mkdir(parents=True, exist_ok=True)
         return d
