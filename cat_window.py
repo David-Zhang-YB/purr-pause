@@ -187,9 +187,17 @@ class CatWindow(QWidget):
             " background: rgba(255,255,255,0.05);"
         )
 
+        _DEFAULT_STATIC = ASSETS_DIR / "Mascot Cat.png"
         custom = Path(self._image_path) if self._image_path else Path()
         if custom.exists() and custom.suffix.lower() in _STATIC_EXTS:
-            px = QPixmap(str(custom)).scaled(
+            src = custom
+        elif _DEFAULT_STATIC.exists():
+            src = _DEFAULT_STATIC
+        else:
+            src = None
+
+        if src is not None:
+            px = QPixmap(str(src)).scaled(
                 THUMB_SIZE, THUMB_SIZE,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation,

@@ -9,7 +9,8 @@ from settings import load_config
 from timer import RestTimer
 from tray import TrayIcon
 
-_ASSET_DIR = Path(__file__).parent / "assets"
+_ASSET_DIR  = Path(__file__).parent / "assets"
+_ANIM_VIDEO = _ASSET_DIR / "American Shorthair Cat Transparent.mp4"
 
 
 def main() -> None:
@@ -33,11 +34,8 @@ def main() -> None:
         _windows.append(window)
         window.destroyed.connect(lambda: _windows.remove(window))
 
-        walk_in  = _ASSET_DIR / "cat_walk_in.mp4"
-        idle     = _ASSET_DIR / "cat_idle.mp4"
-        walk_out = _ASSET_DIR / "cat_walk_out.mp4"
-        if all(p.exists() for p in (walk_in, idle, walk_out)):
-            cat_anim = CatAnimWindow(str(walk_in), str(idle), str(walk_out))
+        if _ANIM_VIDEO.exists():
+            cat_anim = CatAnimWindow(str(_ANIM_VIDEO))
             window.countdown_finished.connect(cat_anim.start_walk_out)
             cat_anim.show()
 
