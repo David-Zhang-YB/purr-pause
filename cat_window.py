@@ -6,7 +6,7 @@ from PyQt6.QtCore import (
     QEasingCurve, QPoint, QRectF,
 )
 from PyQt6.QtGui import (
-    QBrush, QColor, QFont, QFontDatabase, QImage, QLinearGradient,
+    QBrush, QColor, QFont, QFontDatabase, QLinearGradient,
     QMovie, QPixmap, QPainter,
 )
 from PyQt6.QtWidgets import (
@@ -27,21 +27,6 @@ _STATIC_EXTS  = {".png", ".jpg", ".jpeg", ".webp"}
 
 _NOTO_FAMILY: str | None = None
 
-
-def _make_thumb(path: str, size: int) -> QPixmap:
-    """Load image, remove near-white background, return transparent pixmap."""
-    import numpy as np
-    img = QImage(str(path)).convertToFormat(QImage.Format.Format_ARGB32)
-    img = img.scaled(size, size,
-                     Qt.AspectRatioMode.KeepAspectRatio,
-                     Qt.TransformationMode.SmoothTransformation)
-    w, h = img.width(), img.height()
-    arr = np.frombuffer(img.bits().asarray(h * w * 4),
-                        dtype=np.uint8).reshape(h, w, 4).copy()  # BGRA
-    min_ch = np.minimum(arr[:, :, 0], np.minimum(arr[:, :, 1], arr[:, :, 2])).astype(np.int32)
-    alpha  = np.clip((220 - min_ch) * 255 // 35, 0, 255).astype(np.uint8)
-    arr[:, :, 3] = np.minimum(arr[:, :, 3], alpha)
-    return QPixmap.fromImage(QImage(arr.tobytes(), w, h, w * 4, QImage.Format.Format_ARGB32))
 
 
 def _ensure_font() -> str:
@@ -203,7 +188,7 @@ class CatWindow(QWidget):
             " background: #16161a;"
         )
 
-        _DEFAULT_STATIC = ASSETS_DIR / "Mascot Cat.png"
+        _DEFAULT_STATIC = ASSETS_DIR / "Mascot Cat Black.png"
         custom = Path(self._image_path) if self._image_path else Path()
         if custom.exists() and custom.suffix.lower() in _STATIC_EXTS:
             src = custom
@@ -213,7 +198,13 @@ class CatWindow(QWidget):
             src = None
 
         if src is not None:
-            gif_label.setPixmap(_make_thumb(str(src), THUMB_SIZE))
+            gif_label.setPixmap(
+                QPixmap(str(src)).scaled(
+                    THUMB_SIZE, THUMB_SIZE,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
         else:
             gif_path = (
                 custom if custom.exists() and custom.suffix.lower() == ".gif"
@@ -231,61 +222,41 @@ class CatWindow(QWidget):
             gif_label.setMovie(self._movie)
             self._movie.start()
 
-        # ── 右侧：三行内容 ────────────────────────────────────
-        # 行 1：应用名 + 关闭按钮
-        top_row = QHBoxLayout()
-        top_row.setContentsMargins(0, 0, 0, 0)
-        top_row.setSpacing(0)
+        # ── 右侧：倒计时 + 关闭按钮 + 进度条 ──────────────────
+        # 行 1：大字倒计时 + 关闭按钮
+        count_row = QHBoxLayout()
+        count_row.setContentsMargins(0, 0, 0, 0)
+        count_row.setSpacing(0)
 
-        f_app = QFont(fam, 10)
-        f_app.setWeight(QFont.Weight.Light)
-        f_app.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 0.6)
-        app_label = QLabel("Purr Pause")
-        app_label.setFont(f_app)
-        app_label.setStyleSheet("color: #8E8E93;")
+        f_count = QFont(fam, 30)
+        f_count.setWeight(QFont.Weight.Medium)
+        self._time_label = QLabel(self._fmt_countdown())
+        self._time_label.setFont(f_count)
+        self._time_label.setStyleSheet("color: white;")
 
         close_btn = QPushButton("×")
-        close_btn.setFixedSize(20, 20)
+        close_btn.setFixedSize(22, 22)
         close_btn.setStyleSheet(
             "QPushButton { background: rgba(255,255,255,0.20); border: none;"
-            " color: white; font-size: 12px; border-radius: 10px; }"
+            " color: white; font-size: 13px; border-radius: 11px; }"
             "QPushButton:hover { background: rgba(255,255,255,0.35); }"
         )
         close_btn.clicked.connect(self._fade_out)
 
-        top_row.addWidget(app_label)
-        top_row.addStretch()
-        top_row.addWidget(close_btn)
+        count_row.addWidget(self._time_label)
+        count_row.addStretch()
+        count_row.addWidget(close_btn)
 
-        # 行 2：主文字
-        f_main = QFont(fam, 13)
-        f_main.setWeight(QFont.Weight.Medium)
-        msg_label = QLabel("看向 20 英尺外 · 休息一下")
-        msg_label.setFont(f_main)
-        msg_label.setStyleSheet("color: white;")
-
-        # 行 3：倒计时 + 进度条
-        bottom_row = QHBoxLayout()
-        bottom_row.setContentsMargins(0, 0, 0, 0)
-        bottom_row.setSpacing(8)
-
-        f_time = QFont(fam, 11)
-        f_time.setWeight(QFont.Weight.Light)
-        self._time_label = QLabel(f"还剩 {self._countdown} 秒")
-        self._time_label.setFont(f_time)
-        self._time_label.setStyleSheet("color: #8E8E93;")
-
+        # 行 2：进度条
         self._progress_bar = _ProgressBar(total=self._countdown)
 
-        bottom_row.addWidget(self._time_label)
-        bottom_row.addWidget(self._progress_bar, 1)
-
         right_col = QVBoxLayout()
-        right_col.setSpacing(6)
+        right_col.setSpacing(8)
         right_col.setContentsMargins(0, 0, 0, 0)
-        right_col.addLayout(top_row)
-        right_col.addWidget(msg_label)
-        right_col.addLayout(bottom_row)
+        right_col.addStretch(1)
+        right_col.addLayout(count_row)
+        right_col.addWidget(self._progress_bar)
+        right_col.addStretch(1)
 
         # ── 卡片容器（_GlowCard 包含发光边框 + 内填充） ─────────
         self._glow_card = _GlowCard()
@@ -332,6 +303,10 @@ class CatWindow(QWidget):
         self._entry_anim.start()
         self._entry_anim.finished.connect(self._glow_card.start_breathing)
 
+    def _fmt_countdown(self) -> str:
+        m, s = divmod(self._countdown, 60)
+        return f"{m:02d}:{s:02d}"
+
     def _start_countdown(self) -> None:
         self._timer = QTimer()
         self._timer.timeout.connect(self._tick)
@@ -339,7 +314,7 @@ class CatWindow(QWidget):
 
     def _tick(self) -> None:
         self._countdown -= 1
-        self._time_label.setText(f"还剩 {self._countdown} 秒")
+        self._time_label.setText(self._fmt_countdown())
         self._progress_bar.set_remaining(self._countdown)
         if self._countdown <= 0:
             self.countdown_finished.emit()

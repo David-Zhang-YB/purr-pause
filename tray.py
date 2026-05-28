@@ -19,31 +19,53 @@ class TrayIcon(QSystemTrayIcon):
         self._timer = timer
 
         menu = QMenu()
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #1e1e1e;
+                color: #e0e0e0;
+                border: 1px solid #3a3a3a;
+                border-radius: 8px;
+                padding: 4px 0px;
+            }
+            QMenu::item {
+                padding: 7px 24px 7px 14px;
+                border-radius: 4px;
+            }
+            QMenu::item:selected {
+                background-color: rgba(255,255,255,0.10);
+                color: #ffffff;
+            }
+            QMenu::separator {
+                height: 1px;
+                background-color: #3a3a3a;
+                margin: 4px 8px;
+            }
+        """)
 
-        self._pause_action = menu.addAction("⏸ 暂停")
+        self._pause_action = menu.addAction("⏸  暂停")
         self._pause_action.triggered.connect(self._toggle_pause)
 
-        settings_action = menu.addAction("⚙ 设置")
+        settings_action = menu.addAction("⚙  设置")
         settings_action.triggered.connect(self._open_settings)
 
-        about_action = menu.addAction("ℹ 关于")
+        about_action = menu.addAction("ℹ  关于")
         about_action.triggered.connect(self._show_about)
 
         menu.addSeparator()
-        quit_action = menu.addAction("✕ 退出")
+        quit_action = menu.addAction("✕  退出")
         quit_action.triggered.connect(QApplication.quit)
 
         self.setContextMenu(menu)
-        self.setToolTip("Purr Pause — 20-20-20 护眼提醒")
+        self.setToolTip("Purr Pause")
         self.show()
 
     def _toggle_pause(self) -> None:
         if self._timer.is_paused:
             self._timer.resume()
-            self._pause_action.setText("⏸ 暂停")
+            self._pause_action.setText("⏸  暂停")
         else:
             self._timer.pause()
-            self._pause_action.setText("▶ 继续")
+            self._pause_action.setText("▶  继续")
 
     def _open_settings(self) -> None:
         from settings import SettingsDialog, load_config
