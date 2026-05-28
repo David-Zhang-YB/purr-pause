@@ -3,8 +3,8 @@ from pathlib import Path
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QFont, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import (
-    QApplication, QLabel, QMenu, QMessageBox,
-    QSystemTrayIcon, QVBoxLayout, QWidget, QWidgetAction,
+    QApplication, QHBoxLayout, QLabel, QMenu, QMessageBox,
+    QSystemTrayIcon, QWidget, QWidgetAction,
 )
 
 _ASSET_DIR = Path(__file__).parent / "assets"
@@ -20,25 +20,35 @@ def _make_cat_icon() -> QIcon:
     return QIcon(px)
 
 
+def _make_header_icon(size: int = 22) -> QPixmap:
+    px = QPixmap(QSize(size, size))
+    px.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(px)
+    painter.setFont(QFont("Segoe UI Emoji", int(size * 0.75)))
+    painter.drawText(px.rect(), Qt.AlignmentFlag.AlignCenter, "🐱")
+    painter.end()
+    return px
+
+
 def _make_header(menu: QMenu) -> QWidgetAction:
     """Create a non-clickable app header for the top of the context menu."""
     widget = QWidget()
     widget.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-    layout = QVBoxLayout(widget)
-    layout.setContentsMargins(14, 10, 14, 8)
-    layout.setSpacing(2)
+    outer = QHBoxLayout(widget)
+    outer.setContentsMargins(18, 10, 18, 10)
+    outer.setSpacing(12)
+
+    icon = QLabel()
+    icon.setPixmap(_make_header_icon())
+    icon.setStyleSheet("background: transparent;")
+    outer.addWidget(icon)
 
     title = QLabel("Purr Pause")
     title.setStyleSheet(
-        "color: #ffffff; font-size: 13px; font-weight: 600; background: transparent;"
+        "color: #F5F5F5; font-size: 14px; font-weight: 600; background: transparent;"
     )
-    sub = QLabel("20-20-20 护眼提醒")
-    sub.setStyleSheet(
-        "color: #8E8E93; font-size: 11px; background: transparent;"
-    )
-
-    layout.addWidget(title)
-    layout.addWidget(sub)
+    outer.addWidget(title)
+    outer.addStretch()
 
     action = QWidgetAction(menu)
     action.setDefaultWidget(widget)
@@ -51,36 +61,37 @@ class TrayIcon(QSystemTrayIcon):
         self._timer = timer
 
         menu = QMenu()
+        menu.setMinimumWidth(240)
         menu.setStyleSheet("""
             QMenu {
-                background-color: #1e1e1e;
-                color: #e0e0e0;
-                border: 1px solid #3a3a3a;
-                border-radius: 8px;
+                background-color: #1F1F1F;
+                color: #F5F5F5;
+                border: 1px solid #333333;
+                border-radius: 10px;
                 padding: 4px 0px;
             }
             QMenu::item {
-                padding: 8px 28px 8px 16px;
+                padding: 10px 24px 10px 20px;
                 border-radius: 4px;
             }
             QMenu::item:selected {
-                background-color: rgba(255,255,255,0.10);
+                background-color: rgba(255,255,255,0.08);
                 color: #ffffff;
             }
             QMenu::separator {
                 height: 1px;
-                background-color: #3a3a3a;
-                margin: 4px 10px;
+                background-color: #333333;
+                margin: 6px 12px;
             }
         """)
 
         menu.addAction(_make_header(menu))
         menu.addSeparator()
 
-        self._pause_action = menu.addAction("⏸  暂停")
+        self._pause_action = menu.addAction("暂停")
         self._pause_action.triggered.connect(self._toggle_pause)
 
-        settings_action = menu.addAction("⚙  设置")
+        settings_action = menu.addAction("设置")
         settings_action.triggered.connect(self._open_settings)
 
         menu.addSeparator()
@@ -94,10 +105,10 @@ class TrayIcon(QSystemTrayIcon):
     def _toggle_pause(self) -> None:
         if self._timer.is_paused:
             self._timer.resume()
-            self._pause_action.setText("⏸  暂停")
+            self._pause_action.setText("暂停")
         else:
             self._timer.pause()
-            self._pause_action.setText("▶  继续")
+            self._pause_action.setText("继续")
 
     def _open_settings(self) -> None:
         from settings import SettingsDialog, load_config

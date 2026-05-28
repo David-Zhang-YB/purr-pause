@@ -21,9 +21,18 @@ def save_config(data: dict) -> None:
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
-    QDialog, QFrame, QHBoxLayout, QLabel,
+    QDialog, QGridLayout, QHBoxLayout, QLabel,
     QPushButton, QSpinBox, QVBoxLayout,
 )
+
+
+BG_DIALOG      = "#1E1E1E"
+BG_INPUT       = "#2B2B2B"
+BORDER_SUBTLE  = "#333333"
+TEXT_PRIMARY   = "#F5F5F5"
+TEXT_SECONDARY = "#A8A8A8"
+ACCENT         = "#F4B86A"
+ACCENT_HOVER   = "#D99A43"
 
 
 class SettingsDialog(QDialog):
@@ -39,64 +48,79 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Purr Pause 设置")
         self.setFixedSize(400, 200)
-        self.setStyleSheet("""
-            QDialog  { background: #1e1e1e; }
-            QLabel   { color: #e0e0e0; }
-            QFrame   { background: rgba(255,255,255,0.06); border-radius: 12px; }
-            QSpinBox {
-                background: #2c2c2c; color: white;
-                border: 1px solid #555; border-radius: 6px;
-                padding: 3px 8px;
-            }
-            QSpinBox::up-button, QSpinBox::down-button { width: 16px; }
-            QPushButton {
-                background: rgba(255,255,255,0.12); color: white;
-                border: none; border-radius: 8px;
-                padding: 6px 20px;
-            }
-            QPushButton:hover { background: rgba(255,255,255,0.22); }
+        self.setStyleSheet(f"""
+            QDialog  {{ background: {BG_DIALOG}; }}
+            QLabel   {{ color: {TEXT_PRIMARY}; font-size: 13px; }}
+            QLabel#subtitle {{ color: {TEXT_SECONDARY}; font-size: 12px; }}
+            QLabel#unit     {{ color: {TEXT_SECONDARY}; font-size: 12px; }}
+            QSpinBox {{
+                background: {BG_INPUT}; color: {TEXT_PRIMARY};
+                border: 1px solid {BORDER_SUBTLE}; border-radius: 6px;
+                padding: 3px 6px;
+            }}
+            QSpinBox:focus {{ border: 1px solid {ACCENT}; }}
+            QSpinBox::up-button, QSpinBox::down-button {{ width: 14px; }}
+            QPushButton {{
+                background: rgba(255,255,255,0.08); color: {TEXT_PRIMARY};
+                border: none; border-radius: 6px;
+                padding: 6px 18px; font-size: 13px;
+            }}
+            QPushButton:hover {{ background: rgba(255,255,255,0.14); }}
+            QPushButton#primary {{
+                background: {ACCENT}; color: {BG_DIALOG}; font-weight: 600;
+            }}
+            QPushButton#primary:hover {{ background: {ACCENT_HOVER}; }}
         """)
 
         root = QVBoxLayout()
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(12)
+        root.setContentsMargins(20, 18, 20, 16)
+        root.setSpacing(10)
 
-        # ── 参数卡片 ──────────────────────────────────────────
-        params_card = QFrame()
-        params_card.setContentsMargins(0, 0, 0, 0)
-        params_layout = QVBoxLayout(params_card)
-        params_layout.setContentsMargins(16, 12, 16, 12)
-        params_layout.setSpacing(10)
+        subtitle = QLabel("调整护眼提醒和休息时长")
+        subtitle.setObjectName("subtitle")
+        root.addWidget(subtitle)
+        root.addSpacing(4)
 
-        interval_row = QHBoxLayout()
-        interval_row.addWidget(QLabel("提醒间隔（分钟）："))
+        form = QGridLayout()
+        form.setHorizontalSpacing(8)
+        form.setVerticalSpacing(10)
+        form.setColumnStretch(0, 1)
+
+        form.addWidget(QLabel("提醒间隔"), 0, 0)
         self.spinbox = QSpinBox()
         self.spinbox.setRange(1, 60)
         self.spinbox.setSingleStep(1)
         self.spinbox.setValue(int(current_interval))
-        interval_row.addWidget(self.spinbox)
-        params_layout.addLayout(interval_row)
+        self.spinbox.setFixedWidth(64)
+        form.addWidget(self.spinbox, 0, 1)
+        unit_min = QLabel("分钟")
+        unit_min.setObjectName("unit")
+        form.addWidget(unit_min, 0, 2)
 
-        rest_row = QHBoxLayout()
-        rest_row.addWidget(QLabel("休息时长（秒）："))
+        form.addWidget(QLabel("休息时长"), 1, 0)
         self.rest_spinbox = QSpinBox()
         self.rest_spinbox.setRange(10, 60)
         self.rest_spinbox.setSingleStep(5)
         self.rest_spinbox.setValue(int(current_rest_duration))
-        rest_row.addWidget(self.rest_spinbox)
-        params_layout.addLayout(rest_row)
+        self.rest_spinbox.setFixedWidth(64)
+        form.addWidget(self.rest_spinbox, 1, 1)
+        unit_sec = QLabel("秒")
+        unit_sec.setObjectName("unit")
+        form.addWidget(unit_sec, 1, 2)
 
-        root.addWidget(params_card)
+        root.addLayout(form)
 
-        # ── 按钮行 ───────────────────────────────────────────
+        root.addStretch()
+
         btn_row = QHBoxLayout()
         btn_row.addStretch()
-        save_btn = QPushButton("保存")
-        save_btn.clicked.connect(self._save)
         cancel_btn = QPushButton("取消")
         cancel_btn.clicked.connect(self.reject)
-        btn_row.addWidget(save_btn)
+        save_btn = QPushButton("保存")
+        save_btn.setObjectName("primary")
+        save_btn.clicked.connect(self._save)
         btn_row.addWidget(cancel_btn)
+        btn_row.addWidget(save_btn)
         root.addLayout(btn_row)
 
         self.setLayout(root)
