@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QFont, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import (
@@ -7,7 +5,7 @@ from PyQt6.QtWidgets import (
     QSystemTrayIcon, QWidget, QWidgetAction,
 )
 
-_ASSET_DIR = Path(__file__).parent / "assets"
+from version import VERSION
 
 
 def _make_cat_icon() -> QIcon:
@@ -99,7 +97,7 @@ class TrayIcon(QSystemTrayIcon):
         quit_action.triggered.connect(QApplication.quit)
 
         self.setContextMenu(menu)
-        self.setToolTip("Purr Pause")
+        self.setToolTip(f"Purr Pause v{VERSION}")
         self.show()
 
     def _toggle_pause(self) -> None:
