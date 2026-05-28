@@ -11,3 +11,5 @@ build/
 assets/fonts/SourceHanSansSC-*.otf
 assets/*.mp4
 scripts/_check_video.py
+PurrPause.spec
+assets/icon.ico
