@@ -1,10 +1,10 @@
 import json
 import shutil
-from pathlib import Path
 
-BASE_DIR = Path(__file__).parent
-DEFAULT_CONFIG_PATH = BASE_DIR / "config.default.json"
-CONFIG_PATH = BASE_DIR / "config.json"
+from paths import resource_path, user_data_dir
+
+DEFAULT_CONFIG_PATH = resource_path("config.default.json")
+CONFIG_PATH = user_data_dir() / "config.json"
 
 
 def load_config() -> dict:
