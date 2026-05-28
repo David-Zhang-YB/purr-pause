@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from paths import resource_path
 from PyQt6.QtCore import (
     Qt, QSize, QTimer, QPropertyAnimation, pyqtProperty, pyqtSignal,
     QParallelAnimationGroup, QSequentialAnimationGroup,
@@ -14,7 +15,6 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
-ASSETS_DIR    = Path(__file__).parent / "assets"
 THUMB_SIZE    = 80
 CARD_W        = 360
 CARD_H        = 120
@@ -52,7 +52,7 @@ def _ensure_font() -> str:
     """Load Noto Sans SC variable font once; fall back to Microsoft YaHei."""
     global _NOTO_FAMILY
     if _NOTO_FAMILY is None:
-        font_path = ASSETS_DIR / "fonts" / "NotoSansSC[wght].ttf"
+        font_path = resource_path("assets/fonts/NotoSansSC[wght].ttf")
         if font_path.exists():
             fid = QFontDatabase.addApplicationFont(str(font_path))
             families = QFontDatabase.applicationFontFamilies(fid)
@@ -207,7 +207,7 @@ class CatWindow(QWidget):
             " background: #000000;"
         )
 
-        _DEFAULT_STATIC = ASSETS_DIR / "Mascot Cat Black.png"
+        _DEFAULT_STATIC = resource_path("assets/Mascot Cat Black.png")
         custom = Path(self._image_path) if self._image_path else Path()
         if custom.exists() and custom.suffix.lower() in _STATIC_EXTS:
             src = custom
@@ -223,7 +223,7 @@ class CatWindow(QWidget):
         else:
             gif_path = (
                 custom if custom.exists() and custom.suffix.lower() == ".gif"
-                else ASSETS_DIR / "cat.gif"
+                else resource_path("assets/cat.gif")
             )
             self._movie = QMovie(str(gif_path))
             self._movie.jumpToFrame(0)
