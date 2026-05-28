@@ -1,5 +1,5 @@
 import numpy as np
-from PyQt6.QtCore import Qt, QUrl, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QImage, QPainter
 from PyQt6.QtMultimedia import QMediaPlayer, QVideoSink
 from PyQt6.QtWidgets import QApplication, QWidget
@@ -61,11 +61,14 @@ class CatAnimWindow(QWidget):
     # ── video pipeline ────────────────────────────────────────────────────────
 
     def _create_player(self) -> None:
-        self._sink   = QVideoSink(self)
-        self._player = QMediaPlayer(self)
+        self._sink        = QVideoSink(self)
+        self._player      = QMediaPlayer(self)
+        self._last_render = 0.0          # for 30 fps rate-limit
         self._player.setVideoSink(self._sink)
-        self._player.setNotifyInterval(50)          # 50 ms position updates
-        self._sink.videoFrameChanged.connect(self._on_frame)
+        # QueuedConnection ensures _on_frame runs in the GUI thread
+        self._sink.videoFrameChanged.connect(
+            self._on_frame, Qt.ConnectionType.QueuedConnection
+        )
         self._player.mediaStatusChanged.connect(self._on_status)
         self._player.positionChanged.connect(self._on_position)
 
@@ -92,10 +95,30 @@ class CatAnimWindow(QWidget):
     # ── chroma-key frame processing ───────────────────────────────────────────
 
     def _on_frame(self, frame) -> None:
-        image = frame.toImage().convertToFormat(QImage.Format.Format_ARGB32)
-        w, h  = image.width(), image.height()
-        raw   = image.bits().asarray(h * w * 4)
-        arr   = np.frombuffer(raw, dtype=np.uint8).reshape(h, w, 4).copy()  # BGRA
+        import time
+        now = time.monotonic()
+        if now - self._last_render < 1 / 30:   # cap at 30 fps
+            return
+        self._last_render = now
+
+        if not frame.isValid():
+            return
+        image = frame.toImage()
+        if image.isNull():
+            return
+        image = image.convertToFormat(QImage.Format.Format_ARGB32)
+        if image.isNull():
+            return
+        w, h = image.width(), image.height()
+        if w == 0 or h == 0:
+            return
+        image = image.copy()   # force detach so bits() is always accessible
+        bits = image.bits()
+        if bits is None:
+            return
+
+        arr = np.frombuffer(bits.asarray(h * w * 4),
+                            dtype=np.uint8).reshape(h, w, 4).copy()  # BGRA
         r, g, b = CHROMA_COLOR
         dist_sq = (
             (arr[:, :, 2].astype(np.int32) - r) ** 2
@@ -105,7 +128,7 @@ class CatAnimWindow(QWidget):
         arr[dist_sq < CHROMA_TOL ** 2, 3] = 0
         self._current_image = QImage(
             arr.tobytes(), w, h, w * 4, QImage.Format.Format_ARGB32
-        )
+        ).copy()
         self.update()
 
     # ── rendering ─────────────────────────────────────────────────────────────

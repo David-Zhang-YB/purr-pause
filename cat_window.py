@@ -7,7 +7,7 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtGui import (
     QBrush, QColor, QFont, QFontDatabase, QLinearGradient,
-    QMovie, QPixmap, QPainter,
+    QMovie, QPainterPath, QPixmap, QPainter,
 )
 from PyQt6.QtWidgets import (
     QApplication,
@@ -25,7 +25,26 @@ MARGIN_EDGE   = 16          # gap between card edge and screen edge
 GLOW_MARGIN   = 12          # max glow spread (px); must be ≤ SHADOW_MARGIN
 _STATIC_EXTS  = {".png", ".jpg", ".jpeg", ".webp"}
 
+_CARD_FILL = QColor(0, 0, 0, 255)   # pure black — matches Mascot Cat Black.png background
+
 _NOTO_FAMILY: str | None = None
+
+
+def _make_circular_pixmap(px: QPixmap, size: int) -> QPixmap:
+    """Clip pixmap to a circle."""
+    result = QPixmap(size, size)
+    result.fill(Qt.GlobalColor.transparent)
+    p = QPainter(result)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    path = QPainterPath()
+    path.addEllipse(0.0, 0.0, float(size), float(size))
+    p.setClipPath(path)
+    scaled = px.scaled(size, size,
+                       Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                       Qt.TransformationMode.SmoothTransformation)
+    p.drawPixmap(0, 0, scaled)
+    p.end()
+    return result
 
 
 
@@ -115,7 +134,7 @@ class _GlowCard(QWidget):
         p.drawRoundedRect(card_r, 16.0, 16.0)
 
         # Inner card fill covers border, leaving a ~2px gradient ring visible
-        p.setBrush(QColor(22, 22, 26, 250))
+        p.setBrush(_CARD_FILL)
         p.drawRoundedRect(card_r.adjusted(2, 2, -2, -2), 14.0, 14.0)
 
         p.end()
@@ -185,7 +204,7 @@ class CatWindow(QWidget):
         gif_label.setFixedSize(THUMB_SIZE, THUMB_SIZE)
         gif_label.setStyleSheet(
             f"border-radius: {THUMB_SIZE // 2}px;"
-            " background: #16161a;"
+            " background: #000000;"
         )
 
         _DEFAULT_STATIC = ASSETS_DIR / "Mascot Cat Black.png"
@@ -199,11 +218,7 @@ class CatWindow(QWidget):
 
         if src is not None:
             gif_label.setPixmap(
-                QPixmap(str(src)).scaled(
-                    THUMB_SIZE, THUMB_SIZE,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
+                _make_circular_pixmap(QPixmap(str(src)), THUMB_SIZE)
             )
         else:
             gif_path = (
@@ -222,18 +237,25 @@ class CatWindow(QWidget):
             gif_label.setMovie(self._movie)
             self._movie.start()
 
-        # ── 右侧：倒计时 + 关闭按钮 + 进度条 ──────────────────
-        # 行 1：大字倒计时 + 关闭按钮
-        count_row = QHBoxLayout()
-        count_row.setContentsMargins(0, 0, 0, 0)
-        count_row.setSpacing(0)
-
-        f_count = QFont(fam, 30)
+        # ── 中列：垂直居中的倒计时 + 进度条 ──────────────────────
+        f_count = QFont(fam, 26)
         f_count.setWeight(QFont.Weight.Medium)
         self._time_label = QLabel(self._fmt_countdown())
         self._time_label.setFont(f_count)
+        self._time_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._time_label.setStyleSheet("color: white;")
 
+        self._progress_bar = _ProgressBar(total=self._countdown)
+
+        center_col = QVBoxLayout()
+        center_col.setSpacing(6)
+        center_col.setContentsMargins(0, 0, 0, 0)
+        center_col.addStretch(1)
+        center_col.addWidget(self._time_label)
+        center_col.addWidget(self._progress_bar)
+        center_col.addStretch(1)
+
+        # ── 右列：关闭按钮顶部对齐 ────────────────────────────────
         close_btn = QPushButton("×")
         close_btn.setFixedSize(22, 22)
         close_btn.setStyleSheet(
@@ -243,20 +265,10 @@ class CatWindow(QWidget):
         )
         close_btn.clicked.connect(self._fade_out)
 
-        count_row.addWidget(self._time_label)
-        count_row.addStretch()
-        count_row.addWidget(close_btn)
-
-        # 行 2：进度条
-        self._progress_bar = _ProgressBar(total=self._countdown)
-
-        right_col = QVBoxLayout()
-        right_col.setSpacing(8)
-        right_col.setContentsMargins(0, 0, 0, 0)
-        right_col.addStretch(1)
-        right_col.addLayout(count_row)
-        right_col.addWidget(self._progress_bar)
-        right_col.addStretch(1)
+        close_col = QVBoxLayout()
+        close_col.setContentsMargins(0, 0, 0, 0)
+        close_col.addWidget(close_btn, 0, Qt.AlignmentFlag.AlignTop)
+        close_col.addStretch()
 
         # ── 卡片容器（_GlowCard 包含发光边框 + 内填充） ─────────
         self._glow_card = _GlowCard()
@@ -267,7 +279,8 @@ class CatWindow(QWidget):
         )
         inner_layout.setSpacing(12)
         inner_layout.addWidget(gif_label)
-        inner_layout.addLayout(right_col)
+        inner_layout.addLayout(center_col, 1)   # stretch=1: fills horizontal space
+        inner_layout.addLayout(close_col)
         self._glow_card.setLayout(inner_layout)
 
         # ── 外层透明容器（为发光留白） ────────────────────────────
