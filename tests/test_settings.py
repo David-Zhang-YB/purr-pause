@@ -72,24 +72,6 @@ def test_settings_dialog_cancel_does_not_emit(qtbot):
         dialog.reject()
 
 
-def test_settings_dialog_emits_image_path_changed_on_save(qtbot):
-    from settings import SettingsDialog
-    dialog = SettingsDialog(current_interval=20, current_image_path="")
-    qtbot.addWidget(dialog)
-
-    with qtbot.waitSignal(dialog.image_path_changed, timeout=500) as blocker:
-        dialog._save()
-
-    assert isinstance(blocker.args[0], str)
-
-
-def test_settings_dialog_shows_current_image_name(qtbot):
-    from settings import SettingsDialog
-    dialog = SettingsDialog(current_interval=20, current_image_path="C:/cats/nyan.gif")
-    qtbot.addWidget(dialog)
-
-    assert dialog._img_label.text() == "nyan.gif"
-
 
 def test_settings_dialog_shows_current_rest_duration(qtbot):
     from settings import SettingsDialog

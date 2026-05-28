@@ -6,7 +6,7 @@ from PyQt6.QtCore import (
     QEasingCurve, QPoint, QRectF,
 )
 from PyQt6.QtGui import (
-    QBrush, QColor, QFont, QFontDatabase, QLinearGradient,
+    QBrush, QColor, QFont, QFontDatabase, QImage, QLinearGradient,
     QMovie, QPixmap, QPainter,
 )
 from PyQt6.QtWidgets import (
@@ -26,6 +26,22 @@ GLOW_MARGIN   = 12          # max glow spread (px); must be ≤ SHADOW_MARGIN
 _STATIC_EXTS  = {".png", ".jpg", ".jpeg", ".webp"}
 
 _NOTO_FAMILY: str | None = None
+
+
+def _make_thumb(path: str, size: int) -> QPixmap:
+    """Load image, remove near-white background, return transparent pixmap."""
+    import numpy as np
+    img = QImage(str(path)).convertToFormat(QImage.Format.Format_ARGB32)
+    img = img.scaled(size, size,
+                     Qt.AspectRatioMode.KeepAspectRatio,
+                     Qt.TransformationMode.SmoothTransformation)
+    w, h = img.width(), img.height()
+    arr = np.frombuffer(img.bits().asarray(h * w * 4),
+                        dtype=np.uint8).reshape(h, w, 4).copy()  # BGRA
+    min_ch = np.minimum(arr[:, :, 0], np.minimum(arr[:, :, 1], arr[:, :, 2])).astype(np.int32)
+    alpha  = np.clip((220 - min_ch) * 255 // 35, 0, 255).astype(np.uint8)
+    arr[:, :, 3] = np.minimum(arr[:, :, 3], alpha)
+    return QPixmap.fromImage(QImage(arr.tobytes(), w, h, w * 4, QImage.Format.Format_ARGB32))
 
 
 def _ensure_font() -> str:
@@ -184,7 +200,7 @@ class CatWindow(QWidget):
         gif_label.setFixedSize(THUMB_SIZE, THUMB_SIZE)
         gif_label.setStyleSheet(
             f"border-radius: {THUMB_SIZE // 2}px;"
-            " background: rgba(255,255,255,0.05);"
+            " background: #16161a;"
         )
 
         _DEFAULT_STATIC = ASSETS_DIR / "Mascot Cat.png"
@@ -197,12 +213,7 @@ class CatWindow(QWidget):
             src = None
 
         if src is not None:
-            px = QPixmap(str(src)).scaled(
-                THUMB_SIZE, THUMB_SIZE,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            gif_label.setPixmap(px)
+            gif_label.setPixmap(_make_thumb(str(src), THUMB_SIZE))
         else:
             gif_path = (
                 custom if custom.exists() and custom.suffix.lower() == ".gif"

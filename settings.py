@@ -19,32 +19,26 @@ def save_config(data: dict) -> None:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
-    QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel,
+    QDialog, QFrame, QHBoxLayout, QLabel,
     QPushButton, QSpinBox, QVBoxLayout,
 )
 
-_DEFAULT_CAT = BASE_DIR / "assets" / "cat.gif"
-
 
 class SettingsDialog(QDialog):
-    interval_changed = pyqtSignal(int)
+    interval_changed      = pyqtSignal(int)
     rest_duration_changed = pyqtSignal(int)
-    image_path_changed = pyqtSignal(str)
 
     def __init__(
         self,
         current_interval: int,
         current_rest_duration: int = 20,
-        current_image_path: str = "",
         parent=None,
     ):
         super().__init__(parent)
-        self._image_path = current_image_path
         self.setWindowTitle("Purr Pause 设置")
-        self.setFixedSize(400, 300)
+        self.setFixedSize(400, 200)
         self.setStyleSheet("""
             QDialog  { background: #1e1e1e; }
             QLabel   { color: #e0e0e0; }
@@ -94,35 +88,6 @@ class SettingsDialog(QDialog):
 
         root.addWidget(params_card)
 
-        # ── 图片卡片 ──────────────────────────────────────────
-        img_card = QFrame()
-        img_card.setContentsMargins(0, 0, 0, 0)
-        img_layout = QHBoxLayout(img_card)
-        img_layout.setContentsMargins(16, 12, 16, 12)
-        img_layout.setSpacing(12)
-
-        self._preview = QLabel()
-        self._preview.setFixedSize(90, 80)
-        self._preview.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._preview.setStyleSheet(
-            "background: rgba(255,255,255,0.04); border-radius: 8px;"
-        )
-        self._load_preview(current_image_path)
-        img_layout.addWidget(self._preview)
-
-        img_info = QVBoxLayout()
-        self._img_label = QLabel(
-            Path(current_image_path).name if current_image_path else "（默认）"
-        )
-        self._img_label.setStyleSheet("color: #aaa;")
-        img_info.addWidget(self._img_label)
-        pick_btn = QPushButton("选择图片…")
-        pick_btn.clicked.connect(self._pick_image)
-        img_info.addWidget(pick_btn)
-        img_layout.addLayout(img_info, 1)
-
-        root.addWidget(img_card)
-
         # ── 按钮行 ───────────────────────────────────────────
         btn_row = QHBoxLayout()
         btn_row.addStretch()
@@ -136,30 +101,7 @@ class SettingsDialog(QDialog):
 
         self.setLayout(root)
 
-    def _load_preview(self, path: str) -> None:
-        src = path if (path and Path(path).exists()) else str(_DEFAULT_CAT)
-        px = QPixmap(src)
-        if not px.isNull():
-            self._preview.setPixmap(
-                px.scaled(
-                    90, 80,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-            )
-
-    def _pick_image(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(
-            self, "选择猫咪图片", "",
-            "图片文件 (*.gif *.png *.jpg *.jpeg *.webp)",
-        )
-        if path:
-            self._image_path = path
-            self._img_label.setText(Path(path).name)
-            self._load_preview(path)
-
     def _save(self) -> None:
         self.interval_changed.emit(self.spinbox.value())
         self.rest_duration_changed.emit(self.rest_spinbox.value())
-        self.image_path_changed.emit(self._image_path)
         self.accept()
