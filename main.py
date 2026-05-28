@@ -1,16 +1,15 @@
 import sys
-from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication
 
 from cat_anim_window import CatAnimWindow
 from cat_window import CatWindow
+from paths import resource_path
 from settings import load_config
 from timer import RestTimer
 from tray import TrayIcon
 
-_ASSET_DIR  = Path(__file__).parent / "assets"
-_ANIM_VIDEO = _ASSET_DIR / "American Shorthair Cat Transparent.mp4"
+_ANIM_VIDEO = resource_path("assets/American Shorthair Cat Transparent.mp4")
 
 
 def main() -> None:
