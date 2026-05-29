@@ -9,7 +9,7 @@ from settings import load_config
 from timer import RestTimer
 from tray import TrayIcon
 
-_ANIM_VIDEO = resource_path("assets/American Shorthair Cat Transparent.mp4")
+_ANIM_SPRITES = resource_path("assets/cat_anim")
 
 
 def main() -> None:
@@ -33,13 +33,12 @@ def main() -> None:
         _windows.append(window)
         window.destroyed.connect(lambda: _windows.remove(window))
 
-        # cat animation temporarily disabled pending video pipeline fix
-        # if _ANIM_VIDEO.exists():
-        #     cat_anim = CatAnimWindow(str(_ANIM_VIDEO))
-        #     _windows.append(cat_anim)
-        #     cat_anim.destroyed.connect(lambda: _windows.remove(cat_anim))
-        #     window.countdown_finished.connect(cat_anim.start_walk_out)
-        #     cat_anim.show()
+        if (_ANIM_SPRITES / "manifest.json").exists():
+            cat_anim = CatAnimWindow(_ANIM_SPRITES)
+            _windows.append(cat_anim)
+            cat_anim.destroyed.connect(lambda: _windows.remove(cat_anim))
+            window.countdown_finished.connect(cat_anim.start_walk_out)
+            cat_anim.show()
 
         window.show()
 

@@ -58,7 +58,7 @@ def main() -> None:
         "--name", "PurrPause",
         f"--icon={icon}",
         "--add-data", f"{ROOT/'config.default.json'};.",
-        "--add-data", f"{ROOT/'assets'/'American Shorthair Cat Transparent.mp4'};assets",
+        "--add-data", f"{ROOT/'assets'/'cat_anim'};assets/cat_anim",
         "--add-data", f"{ROOT/'assets'/'Mascot Cat Black.png'};assets",
         "--add-data", f"{ROOT/'assets'/'Mascot Cat White.png'};assets",
         "--add-data", f"{ROOT/'assets'/'cat.gif'};assets",
