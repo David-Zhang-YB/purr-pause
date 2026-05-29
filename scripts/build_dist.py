@@ -17,16 +17,26 @@ except ImportError as exc:
         "or invoke this script with the python that has PyInstaller installed."
     ) from exc
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).parent.parent
 
+EMOJI_FONT = Path("C:/Windows/Fonts/seguiemj.ttf")
+
 
 def make_icon() -> Path:
-    """Generate a multi-size .ico from Mascot Cat Black.png."""
-    src = ROOT / "assets" / "Mascot Cat Black.png"
+    """Render the 🐱 emoji (same glyph as the tray icon) to a multi-size .ico."""
     dst = ROOT / "assets" / "icon.ico"
-    img = Image.open(src).convert("RGBA")
+    size = 256
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.truetype(str(EMOJI_FONT), size=int(size * 0.75))
+    text = "🐱"
+    bbox = draw.textbbox((0, 0), text, font=font, embedded_color=True)
+    w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    x = (size - w) // 2 - bbox[0]
+    y = (size - h) // 2 - bbox[1]
+    draw.text((x, y), text, font=font, embedded_color=True)
     img.save(
         dst,
         format="ICO",
