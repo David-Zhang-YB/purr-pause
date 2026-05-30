@@ -14,15 +14,26 @@ def resource_path(rel: str) -> Path:
 
 
 def user_data_dir() -> Path:
-    """Return the writable user-data directory.
+    """Return the writable user-data directory, per-OS convention.
 
-    Frozen mode: %APPDATA%\\PurrPause (created if missing).
-    Source mode: the project root (so dev experience matches existing behavior).
+    Source mode: project root (matches existing dev behavior).
+    Frozen mode:
+      - Windows: %APPDATA%\\PurrPause (or ~/AppData/Roaming/PurrPause)
+      - macOS:   ~/Library/Application Support/PurrPause
+      - Linux:   $XDG_CONFIG_HOME/PurrPause (or ~/.config/PurrPause)
     """
-    if getattr(sys, "frozen", False):
+    if not getattr(sys, "frozen", False):
+        return Path(__file__).parent
+
+    if sys.platform == "win32":
         appdata = os.environ.get("APPDATA")
         root = Path(appdata) if appdata else Path.home() / "AppData" / "Roaming"
-        d = root / "PurrPause"
-        d.mkdir(parents=True, exist_ok=True)
-        return d
-    return Path(__file__).parent
+    elif sys.platform == "darwin":
+        root = Path.home() / "Library" / "Application Support"
+    else:
+        xdg = os.environ.get("XDG_CONFIG_HOME")
+        root = Path(xdg) if xdg else Path.home() / ".config"
+
+    d = root / "PurrPause"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
