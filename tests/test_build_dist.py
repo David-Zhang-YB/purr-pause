@@ -65,3 +65,22 @@ class TestEmojiFontPath:
     def test_unknown_raises(self):
         with pytest.raises(ValueError):
             build_dist.emoji_font_path("linux")
+
+
+class TestMacOSBranch:
+    def test_make_icns_uses_apple_color_emoji_font(self, monkeypatch):
+        """Verifies make_icns reads from emoji_font_path('darwin'), not Windows path."""
+        captured = []
+        from PIL import ImageFont
+
+        def fake_truetype(path, size):
+            captured.append(str(path))
+            # Return a real font so the rest of make_icns can proceed if reached.
+            raise RuntimeError("font-not-loaded (test stub)")
+
+        monkeypatch.setattr(ImageFont, "truetype", fake_truetype)
+
+        with pytest.raises(RuntimeError):
+            build_dist.make_icns()
+
+        assert captured == ["/System/Library/Fonts/Apple Color Emoji.ttc"]

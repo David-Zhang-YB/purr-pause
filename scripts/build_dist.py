@@ -83,6 +83,33 @@ def make_icon() -> Path:
     return dst
 
 
+def make_icns() -> Path:
+    """Render the 🐱 emoji to a multi-size macOS .icns icon.
+
+    Uses Apple Color Emoji (a TrueType collection); Pillow renders glyph
+    via embedded_color sbix tables.
+    """
+    dst = ROOT / "assets" / "icon.icns"
+    sizes = [16, 32, 48, 64, 128, 256, 512]
+    images = []
+    for size in sizes:
+        img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        # Apple Color Emoji's smallest sbix bitmap is 160px; pick the closest
+        # rendered size and let PIL downscale. Using size*0.75 like make_icon
+        # gives the cat ~75% of the canvas.
+        font = ImageFont.truetype(str(emoji_font_path("darwin")), size=int(size * 0.75))
+        text = "🐱"
+        bbox = draw.textbbox((0, 0), text, font=font, embedded_color=True)
+        w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        x = (size - w) // 2 - bbox[0]
+        y = (size - h) // 2 - bbox[1]
+        draw.text((x, y), text, font=font, embedded_color=True)
+        images.append(img)
+    images[0].save(dst, format="ICNS", append_images=images[1:])
+    return dst
+
+
 def build_windows() -> Path:
     icon = make_icon()
     print(f"[OK] Generated icon: {icon}")
@@ -108,12 +135,54 @@ def build_windows() -> Path:
     return exe
 
 
+def build_macos() -> Path:
+    icon = make_icns()
+    print(f"[OK] Generated icon: {icon}")
+
+    add_data_args: list[str] = []
+    for pair in add_data_pairs(ROOT, "darwin"):
+        add_data_args.extend(["--add-data", pair])
+
+    app_name = f"PurrPause-{VERSION}-macos"
+    cmd = [
+        sys.executable, "-m", "PyInstaller",
+        "--windowed",
+        "--clean",
+        "--noconfirm",
+        "--name", app_name,
+        f"--icon={icon}",
+        *add_data_args,
+        str(ROOT / "main.py"),
+    ]
+    subprocess.run(cmd, cwd=ROOT, check=True)
+
+    app_bundle = ROOT / "dist" / f"{app_name}.app"
+    dmg_path = ROOT / "dist" / output_filename(VERSION, "darwin")
+
+    # dmgbuild is installed on demand in CI (not in requirements.txt).
+    try:
+        import dmgbuild  # noqa: F401
+    except ImportError as exc:
+        raise SystemExit(
+            "dmgbuild not installed. In CI it is installed in the macOS job. "
+            "Locally: `pip install dmgbuild`."
+        ) from exc
+
+    settings_file = ROOT / "scripts" / "dmgbuild_settings.py"
+    subprocess.run(
+        ["dmgbuild", "-s", str(settings_file), app_name, str(dmg_path)],
+        cwd=ROOT, check=True,
+    )
+    return dmg_path
+
+
 def main() -> None:
     if sys.platform == "win32":
         artifact = build_windows()
+    elif sys.platform == "darwin":
+        artifact = build_macos()
     else:
-        raise SystemExit(f"build_dist.py: platform '{sys.platform}' not yet supported. "
-                         f"(macOS support is added in the next task.)")
+        raise SystemExit(f"build_dist.py: platform '{sys.platform}' not supported")
 
     size_mb = artifact.stat().st_size / (1024 * 1024)
     print(f"\n[OK] Built: {artifact}  ({size_mb:.1f} MB)")
