@@ -1,1 +1,1 @@
-VERSION = "0.1.0-trial"
+VERSION = "0.1.0"
