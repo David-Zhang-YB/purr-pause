@@ -12,6 +12,7 @@ assets/fonts/SourceHanSansSC-*.otf
 assets/*.mp4
 scripts/_check_video.py
 PurrPause.spec
+PurrPause-*.spec
 assets/icon.ico
 assets/icon.icns
 .DS_Store

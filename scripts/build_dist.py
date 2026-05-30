@@ -1,12 +1,14 @@
-"""Build PurrPause.exe via PyInstaller.
+"""Build PurrPause distributable via PyInstaller.
 
 Run: python scripts/build_dist.py
 
-Produces: dist/PurrPause.exe (~80-120 MB, single-file Windows binary)
+Produces (under dist/):
+  - Windows: PurrPause-{VERSION}-windows.exe (single-file binary)
+  - macOS:   PurrPause-{VERSION}-macos.dmg   (drag-to-Applications disk image)
 """
 import subprocess
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 try:
     import PyInstaller  # noqa: F401  -- fail fast if missing
@@ -20,17 +22,53 @@ except ImportError as exc:
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT))
+from version import VERSION  # noqa: E402
 
-EMOJI_FONT = Path("C:/Windows/Fonts/seguiemj.ttf")
+
+def output_filename(version: str, platform: str) -> str:
+    """Compute the release artifact filename for a given platform."""
+    if platform == "win32":
+        return f"PurrPause-{version}-windows.exe"
+    if platform == "darwin":
+        return f"PurrPause-{version}-macos.dmg"
+    raise ValueError(f"unsupported platform: {platform}")
+
+
+def add_data_pairs(root: Path, platform: str) -> list[str]:
+    """Build the `--add-data` value list with the correct OS separator."""
+    sep = ";" if platform == "win32" else ":"
+    return [
+        f"{root/'config.default.json'}{sep}.",
+        f"{root/'assets'/'cat_anim'}{sep}assets/cat_anim",
+        f"{root/'assets'/'Mascot Cat Black.png'}{sep}assets",
+        f"{root/'assets'/'Mascot Cat White.png'}{sep}assets",
+        f"{root/'assets'/'cat.gif'}{sep}assets",
+        f"{root/'assets'/'fonts'/'NotoSansSC[wght].ttf'}{sep}assets/fonts",
+    ]
+
+
+def emoji_font_path(platform: str) -> PurePosixPath:
+    """Resolve the per-OS color-emoji font Pillow can render via embedded_color.
+
+    Returns a PurePosixPath so that str() yields forward-slash strings on all
+    host platforms (the paths are passed to Pillow/PyInstaller as strings, not
+    used for Python-level file I/O).
+    """
+    if platform == "win32":
+        return PurePosixPath("C:/Windows/Fonts/seguiemj.ttf")
+    if platform == "darwin":
+        return PurePosixPath("/System/Library/Fonts/Apple Color Emoji.ttc")
+    raise ValueError(f"unsupported platform: {platform}")
 
 
 def make_icon() -> Path:
-    """Render the 🐱 emoji (same glyph as the tray icon) to a multi-size .ico."""
+    """Render the 🐱 emoji to a multi-size Windows .ico."""
     dst = ROOT / "assets" / "icon.ico"
     size = 256
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype(str(EMOJI_FONT), size=int(size * 0.75))
+    font = ImageFont.truetype(str(emoji_font_path("win32")), size=int(size * 0.75))
     text = "🐱"
     bbox = draw.textbbox((0, 0), text, font=font, embedded_color=True)
     w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
@@ -45,9 +83,13 @@ def make_icon() -> Path:
     return dst
 
 
-def main() -> None:
+def build_windows() -> Path:
     icon = make_icon()
     print(f"[OK] Generated icon: {icon}")
+
+    add_data_args: list[str] = []
+    for pair in add_data_pairs(ROOT, "win32"):
+        add_data_args.extend(["--add-data", pair])
 
     cmd = [
         sys.executable, "-m", "PyInstaller",
@@ -55,21 +97,26 @@ def main() -> None:
         "--windowed",
         "--clean",
         "--noconfirm",
-        "--name", "PurrPause",
+        "--name", f"PurrPause-{VERSION}-windows",
         f"--icon={icon}",
-        "--add-data", f"{ROOT/'config.default.json'};.",
-        "--add-data", f"{ROOT/'assets'/'cat_anim'};assets/cat_anim",
-        "--add-data", f"{ROOT/'assets'/'Mascot Cat Black.png'};assets",
-        "--add-data", f"{ROOT/'assets'/'Mascot Cat White.png'};assets",
-        "--add-data", f"{ROOT/'assets'/'cat.gif'};assets",
-        "--add-data", f"{ROOT/'assets'/'fonts'/'NotoSansSC[wght].ttf'};assets/fonts",
+        *add_data_args,
         str(ROOT / "main.py"),
     ]
     subprocess.run(cmd, cwd=ROOT, check=True)
 
-    exe = ROOT / "dist" / "PurrPause.exe"
-    size_mb = exe.stat().st_size / (1024 * 1024)
-    print(f"\n[OK] Built: {exe}  ({size_mb:.1f} MB)")
+    exe = ROOT / "dist" / output_filename(VERSION, "win32")
+    return exe
+
+
+def main() -> None:
+    if sys.platform == "win32":
+        artifact = build_windows()
+    else:
+        raise SystemExit(f"build_dist.py: platform '{sys.platform}' not yet supported. "
+                         f"(macOS support is added in the next task.)")
+
+    size_mb = artifact.stat().st_size / (1024 * 1024)
+    print(f"\n[OK] Built: {artifact}  ({size_mb:.1f} MB)")
 
 
 if __name__ == "__main__":
