@@ -9,13 +9,14 @@ Output: docs/demo.gif (target <= 2 MB).
 
 Algorithm:
   - Read `assets/cat_anim/manifest.json` for canvas size, fps, frame positions.
-  - Frame selection: ALL walk_in frames + evenly-spaced subset of idle frames
-    (capped at IDLE_TARGET_FRAMES) + ALL walk_out frames. Idle is throttled
-    because raw idle is long and repetitive, and dominates GIF file size.
+  - Frame selection: evenly-spaced subsets of walk_in / idle / walk_out, capped
+    at WALK_TARGET_FRAMES / IDLE_TARGET_FRAMES / WALK_TARGET_FRAMES. All three
+    are throttled because the raw sequence runs ~10 seconds at the original
+    fps and produces a GIF well over 2 MB.
   - Composite each RGBA sprite onto a flat-color RGB canvas at the position
     recorded in the manifest.
-  - Downscale the composited canvas by SCALE before appending, so the final
-    GIF is roughly half-size (480x270 instead of 960x540) and well under 2 MB.
+  - Downscale the composited canvas by SCALE before appending so the final
+    GIF stays inside MAX_OUTPUT_BYTES at acceptable visual quality.
   - Save as animated GIF (loop forever, optimize, per-frame durations from
     walk_fps / idle_fps).
 """
@@ -30,8 +31,9 @@ MANIFEST = ANIM_DIR / "manifest.json"
 OUTPUT = ROOT / "docs" / "demo.gif"
 
 BACKGROUND_RGB = (245, 245, 247)
+WALK_TARGET_FRAMES = 30
 IDLE_TARGET_FRAMES = 12
-SCALE = 0.5
+SCALE = 0.4
 MAX_OUTPUT_BYTES = 2 * 1024 * 1024
 
 
@@ -71,8 +73,9 @@ def main() -> None:
     frames: list[Image.Image] = []
     durations: list[int] = []
 
-    for i, pos in enumerate(walk_in, start=1):
-        frames.append(_composite_and_downscale(canvas_size, _frame_path("walk_in", i), pos["x"], pos["y"]))
+    for j in select_idle_indices(len(walk_in), WALK_TARGET_FRAMES):
+        pos = walk_in[j]
+        frames.append(_composite_and_downscale(canvas_size, _frame_path("walk_in", j + 1), pos["x"], pos["y"]))
         durations.append(walk_in_ms)
 
     for j in select_idle_indices(len(idle), IDLE_TARGET_FRAMES):
@@ -80,8 +83,9 @@ def main() -> None:
         frames.append(_composite_and_downscale(canvas_size, _frame_path("idle", j + 1), pos["x"], pos["y"]))
         durations.append(idle_ms)
 
-    for i, pos in enumerate(walk_out, start=1):
-        frames.append(_composite_and_downscale(canvas_size, _frame_path("walk_out", i), pos["x"], pos["y"]))
+    for j in select_idle_indices(len(walk_out), WALK_TARGET_FRAMES):
+        pos = walk_out[j]
+        frames.append(_composite_and_downscale(canvas_size, _frame_path("walk_out", j + 1), pos["x"], pos["y"]))
         durations.append(walk_out_ms)
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
