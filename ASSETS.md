@@ -8,7 +8,8 @@ redistributing.
 
 | Asset | Source | License | Notes |
 |---|---|---|---|
-| `assets/cat_anim/*.png` (≈ 206 frames) | Generated offline from `assets/American Shorthair Cat Transparent.mp4` by `scripts/build_cat_animation.py` | Same as the source video — see below | Walk-in / idle / walk-out sprite frames |
+| `config.default.json` | Project source | © 2026 Yubo Zhang, MIT | Default config bundled at build time; copied to the per-user data directory on first run |
+| `assets/cat_anim/*.png` (≈ 206 frames) | Generated offline from `assets/American Shorthair Cat Transparent.mp4` by `scripts/extract_cat_frames.py` | Same as the source video — see below | Walk-in / idle / walk-out sprite frames |
 | `assets/cat_anim/manifest.json` | Generated alongside the PNGs | Same as the source video | Per-frame `(x, y)` position metadata |
 | `assets/Mascot Cat Black.png` | Placeholder asset created by the project owner | © 2026 Yubo Zhang, MIT (matches repo license) | Legacy tray icon graphic |
 | `assets/Mascot Cat White.png` | Placeholder asset created by the project owner | © 2026 Yubo Zhang, MIT | Legacy tray icon graphic |
