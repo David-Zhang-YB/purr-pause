@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write  # required for softprops/action-gh-release
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Verify version.py matches git tag
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PY_VERSION=$(python -c "import version; print(version.VERSION)")
+          if [ "$TAG" != "$PY_VERSION" ]; then
+            echo "::error::tag '$TAG' does not match version.VERSION '$PY_VERSION'"
+            exit 1
+          fi
+
+      - name: Build Windows .exe
+        run: python scripts/build_dist.py
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: dist/PurrPause-*-windows.exe
+          if-no-files-found: error
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install dmgbuild
+
+      - name: Verify version.py matches git tag
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PY_VERSION=$(python -c "import version; print(version.VERSION)")
+          if [ "$TAG" != "$PY_VERSION" ]; then
+            echo "::error::tag '$TAG' does not match version.VERSION '$PY_VERSION'"
+            exit 1
+          fi
+
+      - name: Build macOS .dmg
+        run: python scripts/build_dist.py
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: dist/PurrPause-*-macos.dmg
+          if-no-files-found: error
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-macos]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/windows-exe/*
+            artifacts/macos-dmg/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
