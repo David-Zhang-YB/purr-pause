@@ -51,9 +51,9 @@ def add_data_pairs(root: Path, platform: str) -> list[str]:
 def emoji_font_path(platform: str) -> PurePosixPath:
     """Resolve the per-OS color-emoji font Pillow can render via embedded_color.
 
-    Returns a PurePosixPath so that str() yields forward-slash strings on all
-    host platforms (the paths are passed to Pillow/PyInstaller as strings, not
-    used for Python-level file I/O).
+    Returns a PurePosixPath so that str() yields forward-slash strings, which
+    both Pillow and PyInstaller accept on every host platform. (A plain Path
+    on Windows would canonicalize to backslashes via str().)
     """
     if platform == "win32":
         return PurePosixPath("C:/Windows/Fonts/seguiemj.ttf")
@@ -103,9 +103,9 @@ def make_icns() -> Path:
     for size in sizes:
         img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
         draw = ImageDraw.Draw(img)
-        # Apple Color Emoji's smallest sbix bitmap is 160px; pick the closest
-        # rendered size and let PIL downscale. Using size*0.75 like make_icon
-        # gives the cat ~75% of the canvas.
+        # BUG: see KNOWN ISSUE in docstring — size*0.75 falls below the smallest
+        # sbix bitmap (20px) for small canvases (16, 32 → 12, 24), raising
+        # "OSError: invalid pixel size" in FreeType.
         font = ImageFont.truetype(str(emoji_font_path("darwin")), size=int(size * 0.75))
         text = "🐱"
         bbox = draw.textbbox((0, 0), text, font=font, embedded_color=True)
@@ -164,7 +164,8 @@ def build_macos() -> Path:
     ]
     subprocess.run(cmd, cwd=ROOT, check=True)
 
-    app_bundle = ROOT / "dist" / f"{app_name}.app"
+    # dmgbuild reads the .app from dist/<appname>.app via its own settings file —
+    # we don't pass the path explicitly. Just compute the output .dmg location.
     dmg_path = ROOT / "dist" / output_filename(VERSION, "darwin")
 
     # dmgbuild is installed on demand in CI (not in requirements.txt).
