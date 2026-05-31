@@ -88,6 +88,14 @@ def make_icns() -> Path:
 
     Uses Apple Color Emoji (a TrueType collection); Pillow renders glyph
     via embedded_color sbix tables.
+
+    KNOWN ISSUE (v0.1.x — macOS build disabled in CI): Apple Color Emoji is
+    a bitmap font with discrete sbix sizes (20/32/40/48/64/96/128/160). The
+    loop below calls ImageFont.truetype with size=int(target*0.75), which is
+    12 for target=16 — below the smallest sbix bitmap, causing
+    "OSError: invalid pixel size". Fix is to always load the font at a
+    known sbix size (e.g. 160) then PIL-downscale the rendered RGBA image.
+    Deferred until we have macOS access to verify the Pillow ICNS writer.
     """
     dst = ROOT / "assets" / "icon.icns"
     sizes = [16, 32, 48, 64, 128, 256, 512]
