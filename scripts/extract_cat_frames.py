@@ -32,15 +32,15 @@ import numpy as np
 from PIL import Image
 
 ROOT = Path(__file__).parent.parent
-SRC = ROOT / "assets" / "American Shorthair Cat Transparent.mp4"
+SRC = ROOT / "assets" / "British Shorthair Silver Shaded Transparent.mp4"
 DST = ROOT / "assets" / "cat_anim"
 
-WALK_IN = (0.0, 4.0)
-IDLE = (4.0, 10.0)
-WALK_OUT = (10.0, 15.0)
+WALK_IN = (0.0, 6.1)
+IDLE = (6.1, 10.5)
+WALK_OUT = (10.5, 15.0)
 
-WALK_FPS = 15
-IDLE_FPS = 12
+WALK_FPS = 30
+IDLE_FPS = 15
 
 ALPHA_CUTOFF = 35
 ALPHA_OPAQUE = 60
@@ -50,7 +50,7 @@ BBOX_ALPHA_THRESHOLD = 64
 WALK_DEDUP_MSE = 100
 IDLE_DEDUP_MSE = 4000
 
-SCALE = 0.5
+SCALE = 0.25
 
 
 def sample_times(start: float, end: float, fps: int) -> list[float]:
