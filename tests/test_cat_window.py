@@ -49,3 +49,13 @@ def test_cat_window_countdown_starts_at_custom_duration(qtbot):
     qtbot.addWidget(window)
 
     assert window._countdown == 15
+
+
+def test_close_button_emits_countdown_finished(qtbot):
+    """Early dismissal via × button must emit countdown_finished so the cat overlay exits."""
+    window = CatWindow()
+    qtbot.addWidget(window)
+    window.show()
+
+    with qtbot.waitSignal(window.countdown_finished, timeout=1000):
+        window._dismiss()

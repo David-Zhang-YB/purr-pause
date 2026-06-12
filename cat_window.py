@@ -263,7 +263,7 @@ class CatWindow(QWidget):
             " color: white; font-size: 13px; border-radius: 11px; }"
             "QPushButton:hover { background: rgba(255,255,255,0.35); }"
         )
-        close_btn.clicked.connect(self._fade_out)
+        close_btn.clicked.connect(self._dismiss)
 
         close_col = QVBoxLayout()
         close_col.setContentsMargins(0, 0, 0, 0)
@@ -341,6 +341,10 @@ class CatWindow(QWidget):
         if self._glow_card is not None:
             self._glow_card.stop_breathing()
         super().closeEvent(event)
+
+    def _dismiss(self) -> None:
+        self.countdown_finished.emit()
+        self._fade_out()
 
     def _fade_out(self) -> None:
         if self._entry_anim is not None:
