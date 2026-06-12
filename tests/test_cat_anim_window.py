@@ -81,3 +81,15 @@ def test_fade_emits_finished(qtbot, sprite_dir):
     qtbot.addWidget(w)
     with qtbot.waitSignal(w.finished, timeout=2000):
         w._start_fade()
+
+
+def test_on_frame_rebuilds_cache_when_size_changes(qtbot, sprite_dir):
+    w = CatAnimWindow(sprite_dir)
+    qtbot.addWidget(w)
+    w.resize(200, 100)
+    w._build_scaled_cache()
+    w._elapsed.start()          # _on_frame calls model.update(elapsed()); must be started
+    w.resize(120, 60)
+    w._cache_size = (999, 999)   # force a stale size so _on_frame rebuilds
+    w._on_frame()
+    assert w._cache_size == (w.width(), w.height())

@@ -32,7 +32,6 @@ class CatAnimWindow(QWidget):
         self._fade = None
         self._cache = {}
         self._cache_size = None
-        self._prev_entry = None
         if not self._load_frames(sprite_dir):
             QTimer.singleShot(0, self._emit_finished_and_close)
             return
@@ -90,11 +89,12 @@ class CatAnimWindow(QWidget):
             return
         self._make_click_through()
         self._build_scaled_cache()
-        self._elapsed.start()
-        self._timer = QTimer(self)
-        self._timer.setTimerType(Qt.TimerType.PreciseTimer)
-        self._timer.timeout.connect(self._on_frame)
-        self._timer.start(FRAME_INTERVAL_MS)
+        if self._timer is None:
+            self._elapsed.start()
+            self._timer = QTimer(self)
+            self._timer.setTimerType(Qt.TimerType.PreciseTimer)
+            self._timer.timeout.connect(self._on_frame)
+            self._timer.start(FRAME_INTERVAL_MS)
 
     def _make_click_through(self) -> None:
         if sys.platform != "win32":
@@ -113,6 +113,8 @@ class CatAnimWindow(QWidget):
 
     def _build_scaled_cache(self) -> None:
         sw, sh = self.width(), self.height()
+        if sw == 0 or sh == 0:
+            return
         scale = min(sw / self._canvas_w, sh / self._canvas_h)
         off_x = (sw - self._canvas_w * scale) / 2
         off_y = (sh - self._canvas_h * scale) / 2
@@ -153,13 +155,15 @@ class CatAnimWindow(QWidget):
         cur = self._current_entry()
         if cur is not prev:
             self.update()  # full-window repaint; Task 4 narrows this to the dirty rect
-        if self._model.done:
+        if self._model.done and self._fade is None:
             self._timer.stop()
             self._start_fade()
 
     def _current_entry(self):
         phase = self._model.phase
         if phase == "FINISHED":
+            # model holds the last walk_out index when FINISHED, so the clamp
+            # below shows the final exit frame during the closing fade.
             phase = "WALK_OUT"
         frames = self._cache.get(phase)
         if not frames:
