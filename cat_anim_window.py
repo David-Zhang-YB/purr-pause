@@ -154,6 +154,9 @@ class CatAnimWindow(QWidget):
         self._model.update(self._elapsed.elapsed())
         cur = self._current_entry()
         if cur is not prev:
+            # Repaint only the union of the old and new cat rects. The window is
+            # WA_TranslucentBackground, so the old position clears to transparent
+            # on partial repaint; if ghosting ever appears, widen this to update().
             dirty = self._entry_rect(cur)
             prev_rect = self._entry_rect(prev)
             if not prev_rect.isNull():
