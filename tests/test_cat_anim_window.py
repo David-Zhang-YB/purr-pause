@@ -93,3 +93,15 @@ def test_on_frame_rebuilds_cache_when_size_changes(qtbot, sprite_dir):
     w._cache_size = (999, 999)   # force a stale size so _on_frame rebuilds
     w._on_frame()
     assert w._cache_size == (w.width(), w.height())
+
+
+def test_entry_rect_matches_pixmap_geometry(qtbot, sprite_dir):
+    from PyQt6.QtCore import QRect
+    w = CatAnimWindow(sprite_dir)
+    qtbot.addWidget(w)
+    w.resize(200, 100)
+    w._build_scaled_cache()
+    entry = w._cache["IDLE"][0]
+    pix, x, y = entry
+    assert w._entry_rect(entry) == QRect(x, y, pix.width(), pix.height())
+    assert w._entry_rect(None).isNull()

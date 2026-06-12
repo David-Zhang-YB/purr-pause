@@ -154,10 +154,20 @@ class CatAnimWindow(QWidget):
         self._model.update(self._elapsed.elapsed())
         cur = self._current_entry()
         if cur is not prev:
-            self.update()  # full-window repaint; Task 4 narrows this to the dirty rect
+            dirty = self._entry_rect(cur)
+            prev_rect = self._entry_rect(prev)
+            if not prev_rect.isNull():
+                dirty = dirty.united(prev_rect)
+            self.update(dirty)
         if self._model.done and self._fade is None:
             self._timer.stop()
             self._start_fade()
+
+    def _entry_rect(self, entry) -> QRect:
+        if entry is None:
+            return QRect()
+        pixmap, x, y = entry
+        return QRect(x, y, pixmap.width(), pixmap.height())
 
     def _current_entry(self):
         phase = self._model.phase
