@@ -1,8 +1,8 @@
-"""Tests for the PNG-sprite CatAnimWindow.
+"""Tests for the CatAnimWindow Qt shell.
 
-The old version of this file misnamedly tested CatWindow (the notification
-card) instead of CatAnimWindow. Those signal tests live in test_cat_window.py.
-This file now genuinely covers CatAnimWindow's state machine.
+Frame-selection logic lives in cat_anim_model.py (tested separately). These
+tests cover wiring, the sprite-loading fallback, exit delegation, the
+pre-scaled cache, and the closing fade.
 """
 import json
 from pathlib import Path
@@ -15,9 +15,8 @@ from cat_anim_window import CatAnimWindow
 
 @pytest.fixture
 def sprite_dir(tmp_path: Path) -> Path:
-    """Minimal scaffold: 2 frames per phase, each a 4×4 RGBA PNG."""
     for name in ("walk_in_01", "walk_in_02",
-                 "idle_01", "idle_02",
+                 "idle_01", "idle_02", "idle_03",
                  "walk_out_01", "walk_out_02"):
         Image.new("RGBA", (4, 4), (200, 150, 100, 255)).save(tmp_path / f"{name}.png")
     manifest = {
@@ -25,21 +24,20 @@ def sprite_dir(tmp_path: Path) -> Path:
         "walk_fps": 24,
         "idle_fps": 12,
         "walk_in": [{"x": 0, "y": 10}, {"x": 5, "y": 10}],
-        "idle": [{"x": 10, "y": 10}, {"x": 12, "y": 10}],
+        "idle": [{"x": 10, "y": 10}, {"x": 12, "y": 10}, {"x": 14, "y": 10}],
         "walk_out": [{"x": 50, "y": 10}, {"x": 80, "y": 10}],
     }
     (tmp_path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     return tmp_path
 
 
-def test_instantiates_with_valid_sprites(qtbot, sprite_dir):
+def test_instantiates_and_builds_model(qtbot, sprite_dir):
     w = CatAnimWindow(sprite_dir)
     qtbot.addWidget(w)
-    assert w._state == "WALK_IN"
-    assert w._idx == 0
-    assert len(w._walk_in) == 2
-    assert len(w._idle) == 2
-    assert len(w._walk_out) == 2
+    assert w._model.phase == "WALK_IN"
+    assert w._model.n_walk_in == 2
+    assert w._model.n_idle == 3
+    assert w._model.n_walk_out == 2
 
 
 def test_missing_manifest_emits_finished_immediately(qtbot, tmp_path):
@@ -57,64 +55,29 @@ def test_malformed_manifest_emits_finished_immediately(qtbot, tmp_path):
         pass
 
 
-def test_walk_in_advances_then_transitions_to_idle(qtbot, sprite_dir):
+def test_start_walk_out_requests_model_exit(qtbot, sprite_dir):
     w = CatAnimWindow(sprite_dir)
     qtbot.addWidget(w)
-    assert w._state == "WALK_IN" and w._idx == 0
-    w._on_tick()
-    assert w._state == "WALK_IN" and w._idx == 1
-    w._on_tick()
-    assert w._state == "IDLE" and w._idx == 0
-
-
-def test_idle_loops(qtbot, sprite_dir):
-    w = CatAnimWindow(sprite_dir)
-    qtbot.addWidget(w)
-    w._state = "IDLE"
-    w._idx = 0
-    w._on_tick()
-    assert w._idx == 1
-    w._on_tick()
-    assert w._idx == 0   # wraps
-
-
-def test_start_walk_out_during_idle_transitions_immediately(qtbot, sprite_dir):
-    w = CatAnimWindow(sprite_dir)
-    qtbot.addWidget(w)
-    w._state = "IDLE"
-    w._idx = 1
+    assert w._model._exit_requested is False
     w.start_walk_out()
-    assert w._state == "WALK_OUT" and w._idx == 0
+    assert w._model._exit_requested is True
 
 
-def test_start_walk_out_during_walk_in_queues_until_done(qtbot, sprite_dir):
+def test_build_scaled_cache_covers_all_phases(qtbot, sprite_dir):
+    from PyQt6.QtGui import QPixmap
     w = CatAnimWindow(sprite_dir)
     qtbot.addWidget(w)
-    assert w._state == "WALK_IN"
-    w.start_walk_out()
-    assert w._state == "WALK_IN"
-    assert w._walk_out_pending is True
-    w._on_tick()
-    assert w._state == "WALK_IN"
-    w._on_tick()
-    assert w._state == "WALK_OUT" and w._idx == 0
+    w.resize(200, 100)
+    w._build_scaled_cache()
+    assert set(w._cache) == {"WALK_IN", "IDLE", "WALK_OUT"}
+    assert len(w._cache["IDLE"]) == 3
+    pix, x, y = w._cache["IDLE"][0]
+    assert isinstance(pix, QPixmap)
+    assert isinstance(x, int) and isinstance(y, int)
 
 
-def test_walk_out_completion_emits_finished(qtbot, sprite_dir):
+def test_fade_emits_finished(qtbot, sprite_dir):
     w = CatAnimWindow(sprite_dir)
     qtbot.addWidget(w)
-    w._state = "WALK_OUT"
-    w._idx = 0
-    with qtbot.waitSignal(w.finished, timeout=500):
-        w._on_tick()
-        w._on_tick()
-    assert w._state == "FINISHED"
-
-
-def test_start_walk_out_during_walk_out_is_noop(qtbot, sprite_dir):
-    w = CatAnimWindow(sprite_dir)
-    qtbot.addWidget(w)
-    w._state = "WALK_OUT"
-    w._idx = 1
-    w.start_walk_out()
-    assert w._state == "WALK_OUT" and w._idx == 1
+    with qtbot.waitSignal(w.finished, timeout=2000):
+        w._start_fade()
