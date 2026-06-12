@@ -10,6 +10,8 @@ upright pose before walking the cat out, so phase seams never jump.
 
 class CatAnimModel:
     def __init__(self, n_walk_in, n_idle, n_walk_out, walk_fps, idle_fps):
+        if n_walk_in < 1 or n_idle < 1 or n_walk_out < 1:
+            raise ValueError("each phase needs at least one frame")
         self.n_walk_in = n_walk_in
         self.n_idle = n_idle
         self.n_walk_out = n_walk_out
@@ -74,6 +76,8 @@ class CatAnimModel:
         if self.n_idle <= 1:
             return 0
         frames = int((now_ms - self._phase_start_ms) / self._idle_dt)
+        # n-1 (not n): the two endpoints are shared between the forward and
+        # backward passes, so the loop never repeats a frame at the turnaround.
         period = 2 * (self.n_idle - 1)
         pos = frames % period
         return pos if pos < self.n_idle else period - pos

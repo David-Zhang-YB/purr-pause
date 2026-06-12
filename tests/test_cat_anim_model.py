@@ -1,3 +1,5 @@
+import pytest
+
 from cat_anim_model import CatAnimModel
 
 
@@ -85,3 +87,12 @@ def test_single_idle_frame_is_stable():
     m.request_exit()
     m.update(600)
     assert m.phase == "WALK_OUT"   # ramp from 0 to upright(0) completes immediately
+
+
+def test_rejects_empty_phase():
+    with pytest.raises(ValueError):
+        CatAnimModel(0, 4, 3, 10, 10)
+    with pytest.raises(ValueError):
+        CatAnimModel(3, 0, 3, 10, 10)
+    with pytest.raises(ValueError):
+        CatAnimModel(3, 4, 0, 10, 10)
