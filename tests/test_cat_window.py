@@ -24,14 +24,17 @@ def test_cat_window_tick_decrements_countdown(qtbot):
 
 
 def test_cat_window_closes_after_countdown_zero(qtbot):
+    from PyQt6 import sip
+
+    # No addWidget: WA_DeleteOnClose makes the window self-delete, and pytest-qt's
+    # teardown would otherwise call close() on the already-deleted C++ object.
     window = CatWindow()
-    qtbot.addWidget(window)
     window.show()
     window._countdown = 1
     window._tick()  # 归零，触发淡出
 
-    # 动画 500ms 后关闭，等待最多 1000ms
-    qtbot.waitUntil(lambda: not window.isVisible(), timeout=1000)
+    # 动画 500ms 后关闭并删除窗口，等待最多 1000ms（删除后 isVisible 会抛异常）
+    qtbot.waitUntil(lambda: sip.isdeleted(window) or not window.isVisible(), timeout=1000)
 
 
 def test_cat_window_with_empty_path_uses_default(qtbot):
@@ -59,3 +62,12 @@ def test_close_button_emits_countdown_finished(qtbot):
 
     with qtbot.waitSignal(window.countdown_finished, timeout=1000):
         window._dismiss()
+
+
+def test_cat_window_deleted_after_close(qtbot):
+    """Closing must delete the widget (not just hide it), or it leaks every rest cycle."""
+    from PyQt6 import sip
+
+    window = CatWindow()
+    window.close()
+    qtbot.waitUntil(lambda: sip.isdeleted(window), timeout=1000)

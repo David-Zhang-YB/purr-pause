@@ -3,96 +3,77 @@ import pytest
 from cat_anim_model import CatAnimModel
 
 
-def make(n_wi=3, n_idle=4, n_wo=3, walk_fps=10, idle_fps=10):
-    # walk_dt = idle_dt = 100ms at fps=10
-    return CatAnimModel(n_wi, n_idle, n_wo, walk_fps, idle_fps)
+def make(frame_times=None, duration_ms=1000):
+    if frame_times is None:
+        frame_times = [0.0, 0.25, 0.5, 0.75]
+    return CatAnimModel(frame_times, duration_ms)
 
 
-def test_starts_in_walk_in_at_frame_zero():
+def test_starts_at_frame_zero():
     m = make()
-    assert m.phase == "WALK_IN"
     assert m.index == 0
     assert m.done is False
 
 
-def test_walk_in_advances_by_elapsed_time():
+def test_progress_zero_holds_first_frame():
     m = make()
-    m.update(0);   assert (m.phase, m.index) == ("WALK_IN", 0)
-    m.update(150); assert (m.phase, m.index) == ("WALK_IN", 1)
-    m.update(250); assert (m.phase, m.index) == ("WALK_IN", 2)
-
-
-def test_walk_in_enters_idle_at_boundary():
-    m = make()  # 3 walk_in frames * 100ms = 300ms boundary
-    m.update(290); assert m.phase == "WALK_IN"
-    m.update(300); assert m.phase == "IDLE"
-
-
-def test_idle_pingpongs_without_jumping():
-    m = make(n_idle=4, idle_fps=10)  # period = 2*(4-1) = 6
-    m.phase = "IDLE"
-    m._phase_start_ms = 0.0
-    seq = [(m.update(t), m.index)[1] for t in (0, 100, 200, 300, 400, 500, 600, 700)]
-    assert seq == [0, 1, 2, 3, 2, 1, 0, 1]
-
-
-def test_exit_during_idle_ramps_to_upright_then_walk_out():
-    m = make(n_idle=4, idle_fps=10)  # idle_dt = 100ms, upright index = 3
-    m.phase = "IDLE"
-    m._phase_start_ms = 0.0
-    m.update(100)                 # ping-pong index 1
-    assert m.phase == "IDLE"
-    m.request_exit()
-    m.update(150)                 # capture ramp_from at current ping-pong index
-    assert m.phase == "IDLE"
-    captured = m.index
-    m.update(150 + 100); assert m.index == captured + 1   # ramps upward
-    # keep updating until it reaches the upright end and flips to WALK_OUT
-    t = 150 + 100
-    while m.phase == "IDLE" and t < 2000:
-        t += 100
-        m.update(t)
-    assert m.phase == "WALK_OUT"
-    assert m.index == 0
-
-
-def test_exit_during_walk_in_sweeps_idle_once_then_walk_out():
-    m = make(n_wi=2, n_idle=4, n_wo=2, walk_fps=10, idle_fps=10)
     m.update(0)
-    m.request_exit()
-    m.update(50);  assert m.phase == "WALK_IN"
-    t = 200            # walk_in boundary (2 * 100ms)
-    while m.phase != "WALK_OUT" and t < 2000:
-        m.update(t)
-        t += 100
-    assert m.phase == "WALK_OUT"
+    assert m.index == 0
+    assert m.done is False
 
 
-def test_walk_out_completes_and_sets_done():
-    m = make(n_wo=2, walk_fps=10)   # walk_dt = 100ms, 2 frames -> 200ms boundary
-    m.phase = "WALK_OUT"
-    m._phase_start_ms = 0.0
-    m.update(50);  assert (m.phase, m.index, m.done) == ("WALK_OUT", 0, False)
-    m.update(150); assert (m.phase, m.index) == ("WALK_OUT", 1)
-    m.update(250); assert (m.phase, m.done) == ("FINISHED", True)
+def test_picks_frame_by_progress():
+    m = make([0.0, 0.25, 0.5, 0.75], duration_ms=1000)
+    m.update(100);  assert m.index == 0    # progress 0.10 -> t=0.0
+    m.update(300);  assert m.index == 1    # progress 0.30 -> t=0.25
+    m.update(600);  assert m.index == 2    # progress 0.60 -> t=0.5
+    m.update(800);  assert m.index == 3    # progress 0.80 -> t=0.75
 
 
-def test_single_idle_frame_is_stable():
-    m = make(n_idle=1, idle_fps=10)
-    m.phase = "IDLE"
-    m._phase_start_ms = 0.0
-    for t in (0, 100, 500):
-        m.update(t)
-        assert m.index == 0
-    m.request_exit()
-    m.update(600)
-    assert m.phase == "WALK_OUT"   # ramp from 0 to upright(0) completes immediately
+def test_reaches_last_frame_and_done_at_duration():
+    m = make([0.0, 0.5], duration_ms=1000)
+    m.update(999);  assert (m.index, m.done) == (1, False)
+    m.update(1000); assert (m.index, m.done) == (1, True)
 
 
-def test_rejects_empty_phase():
+def test_overshoot_past_duration_stays_done_on_last_frame():
+    m = make([0.0, 0.3, 1.0], duration_ms=1000)
+    m.update(5000)
+    assert m.index == len(m._frame_times) - 1
+    assert m.done is True
+
+
+def test_holds_last_frame_through_a_still_gap():
+    # A long motionless stretch: only two frames span 0.1 -> 0.9 of the clip.
+    m = make([0.0, 0.1, 0.9, 1.0], duration_ms=1000)
+    m.update(100);  assert m.index == 1    # progress 0.1 -> t=0.1
+    m.update(500);  assert m.index == 1    # progress 0.5 still holds t=0.1
+    m.update(890);  assert m.index == 1    # progress 0.89 still holds t=0.1
+    m.update(900);  assert m.index == 2    # progress 0.9 -> t=0.9
+
+
+def test_longer_duration_stretches_same_sequence():
+    # Same frames, 4x duration: progress advances 4x slower.
+    m = make([0.0, 0.5], duration_ms=4000)
+    m.update(1000); assert m.index == 0    # progress 0.25 -> t=0.0
+    m.update(2000); assert m.index == 1    # progress 0.50 -> t=0.5
+    m.update(4000); assert m.done is True
+
+
+def test_single_frame_is_stable_then_done():
+    m = make([0.0], duration_ms=1000)
+    m.update(0);    assert (m.index, m.done) == (0, False)
+    m.update(500);  assert (m.index, m.done) == (0, False)
+    m.update(1000); assert (m.index, m.done) == (0, True)
+
+
+def test_rejects_empty_frames():
     with pytest.raises(ValueError):
-        CatAnimModel(0, 4, 3, 10, 10)
+        CatAnimModel([], 1000)
+
+
+def test_rejects_nonpositive_duration():
     with pytest.raises(ValueError):
-        CatAnimModel(3, 0, 3, 10, 10)
+        CatAnimModel([0.0, 0.5], 0)
     with pytest.raises(ValueError):
-        CatAnimModel(3, 4, 0, 10, 10)
+        CatAnimModel([0.0, 0.5], -100)

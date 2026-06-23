@@ -1,97 +1,39 @@
 """Pure, Qt-free frame-selection model for the rest-break cat animation.
 
-Drives WALK_IN (one-shot) -> IDLE (ping-pong) -> WALK_OUT (one-shot) -> done,
-choosing the frame to show purely from elapsed milliseconds so playback never
-drifts and is decoupled from repaint cadence. Exit is requested asynchronously
-(when the rest countdown ends); the model finishes the idle motion at the
-upright pose before walking the cat out, so phase seams never jump.
+The whole source clip — enter, rest (with head turns), rise, exit — is one frame
+sequence played exactly once, stretched to fill the rest duration. There is no
+loop, so there are no seams. Each frame carries a normalized time position in
+[0, 1]; given the elapsed milliseconds and the target duration, the model shows
+the frame whose position matches the current progress. Frame choice is purely a
+function of elapsed time, so playback never drifts and is decoupled from the
+repaint cadence.
 """
+from bisect import bisect_right
 
 
 class CatAnimModel:
-    def __init__(self, n_walk_in, n_idle, n_walk_out, walk_fps, idle_fps):
-        if n_walk_in < 1 or n_idle < 1 or n_walk_out < 1:
-            raise ValueError("each phase needs at least one frame")
-        self.n_walk_in = n_walk_in
-        self.n_idle = n_idle
-        self.n_walk_out = n_walk_out
-        self._walk_dt = 1000.0 / walk_fps
-        self._idle_dt = 1000.0 / idle_fps
+    def __init__(self, frame_times, duration_ms):
+        if not frame_times:
+            raise ValueError("need at least one frame")
+        if duration_ms <= 0:
+            raise ValueError("duration must be positive")
+        # Normalized, ascending positions in [0, 1]; frame_times[0] is 0.0.
+        self._frame_times = list(frame_times)
+        self._duration_ms = float(duration_ms)
 
-        self.phase = "WALK_IN"
         self.index = 0
         self.done = False
 
-        self._phase_start_ms = 0.0
-        self._exit_requested = False
-        self._ramp_from = None
-        self._ramp_start_ms = 0.0
-
-    def request_exit(self):
-        self._exit_requested = True
-
     def update(self, now_ms):
-        if self.phase == "WALK_IN":
-            self._update_walk_in(now_ms)
-        elif self.phase == "IDLE":
-            self._update_idle(now_ms)
-        elif self.phase == "WALK_OUT":
-            self._update_walk_out(now_ms)
-        # FINISHED: no-op
-
-    def _update_walk_in(self, now_ms):
-        frame = int((now_ms - self._phase_start_ms) / self._walk_dt)
-        if frame >= self.n_walk_in:
-            self._enter_idle(self._phase_start_ms + self.n_walk_in * self._walk_dt)
-            self._update_idle(now_ms)
-            return
-        self.index = frame
-
-    def _enter_idle(self, start_ms):
-        self.phase = "IDLE"
-        self._phase_start_ms = start_ms
-        self.index = 0
-        if self._exit_requested:
-            self._ramp_from = 0
-            self._ramp_start_ms = start_ms
-        else:
-            self._ramp_from = None
-
-    def _update_idle(self, now_ms):
-        if self._exit_requested:
-            if self._ramp_from is None:
-                self._ramp_from = self._pingpong_index(now_ms)
-                self._ramp_start_ms = now_ms
-            ramp_frames = int((now_ms - self._ramp_start_ms) / self._idle_dt)
-            idx = self._ramp_from + ramp_frames
-            if idx >= self.n_idle - 1:
-                self.index = self.n_idle - 1
-                self._enter_walk_out(now_ms)
-                return
-            self.index = idx
-        else:
-            self.index = self._pingpong_index(now_ms)
-
-    def _pingpong_index(self, now_ms):
-        if self.n_idle <= 1:
-            return 0
-        frames = int((now_ms - self._phase_start_ms) / self._idle_dt)
-        # n-1 (not n): the two endpoints are shared between the forward and
-        # backward passes, so the loop never repeats a frame at the turnaround.
-        period = 2 * (self.n_idle - 1)
-        pos = frames % period
-        return pos if pos < self.n_idle else period - pos
-
-    def _enter_walk_out(self, start_ms):
-        self.phase = "WALK_OUT"
-        self._phase_start_ms = start_ms
-        self.index = 0
-
-    def _update_walk_out(self, now_ms):
-        frame = int((now_ms - self._phase_start_ms) / self._walk_dt)
-        if frame >= self.n_walk_out:
-            self.index = self.n_walk_out - 1
-            self.phase = "FINISHED"
+        progress = now_ms / self._duration_ms
+        if progress >= 1.0:
+            self.index = len(self._frame_times) - 1
             self.done = True
             return
-        self.index = frame
+        if progress <= 0.0:
+            self.index = 0
+            return
+        # The last frame whose normalized position has been reached. During a
+        # still stretch (few frames, large time gap) this holds the same frame,
+        # which is correct — the cat really was motionless there.
+        self.index = max(0, bisect_right(self._frame_times, progress) - 1)

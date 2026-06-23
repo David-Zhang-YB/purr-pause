@@ -34,10 +34,15 @@ def main() -> None:
         window.destroyed.connect(lambda: _windows.remove(window))
 
         if (_ANIM_SPRITES / "manifest.json").exists():
-            cat_anim = CatAnimWindow(_ANIM_SPRITES)
+            cat_anim = CatAnimWindow(
+                _ANIM_SPRITES,
+                rest_duration_seconds=cfg.get("rest_duration_seconds", 20),
+            )
             _windows.append(cat_anim)
             cat_anim.destroyed.connect(lambda: _windows.remove(cat_anim))
-            window.countdown_finished.connect(cat_anim.start_walk_out)
+            # The cat plays its whole arc over the rest duration and finishes on
+            # its own clock; this also ends it immediately on early × dismissal.
+            window.countdown_finished.connect(cat_anim.request_finish)
             cat_anim.show()
 
         window.show()

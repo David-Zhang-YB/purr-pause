@@ -187,6 +187,9 @@ class CatWindow(QWidget):
             | Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        # Delete the widget on close so rest cards don't pile up in memory; the
+        # main window-tracking list relies on the destroyed signal to clean up.
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setFixedSize(WIN_W, WIN_H)
         screen = QApplication.primaryScreen().availableGeometry()
         # card's visible right/top edges land at MARGIN_EDGE from screen edges

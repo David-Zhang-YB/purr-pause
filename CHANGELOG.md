@@ -5,6 +5,15 @@ All notable changes to Purr Pause will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] — 2026-06-23
+
+### Changed
+- Rebuilt the rest-break cat as one continuous 60 fps clip (enter → loaf → head turns → rise → walk out) keyed from a green-screen source. Playback now stretches the single sequence to fill the rest duration instead of looping a middle section, so the motion has no seams and the cat finishes walking off exactly as the countdown reaches zero — no more leaving after the timer ends.
+- Frames are rendered at native 1080p and loaded from disk one at a time during playback, sharpening the cat noticeably while keeping memory flat.
+
+### Fixed
+- Fixed a memory and CPU leak where each rest cycle's full-screen overlay was hidden but never destroyed, so its frame data accumulated over a long-running session. Overlay windows are now deleted on close.
+
 ## [0.1.1] — 2026-06-12
 
 ### Changed
