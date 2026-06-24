@@ -16,3 +16,6 @@ PurrPause-*.spec
 assets/icon.ico
 assets/icon.icns
 .DS_Store
+# site/assets/ is populated from docs/ at deploy time (and locally for preview);
+# the originals live in docs/, so don't double-track them here.
+site/assets/

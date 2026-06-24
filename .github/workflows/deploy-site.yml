@@ -1,0 +1,70 @@
+name: Deploy Site
+
+# Deploys the landing page (site/) to the Aliyun server over SSH whenever the page
+# or its source media change. The download button still falls back to GitHub until
+# OSS is configured, so this can go live before the OSS sync is wired up.
+#
+# Self-skips cleanly until the deploy secrets are set, so merging site changes never
+# fails CI before the server exists.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   DEPLOY_SSH_KEY   private key (full PEM/OpenSSH text) authorized on the server
+#   DEPLOY_HOST      server IP or hostname
+#   DEPLOY_USER      ssh user (e.g. root or a deploy user)
+#   DEPLOY_PATH      dedicated web root, e.g. /var/www/purrpause  (NOTE: rsync --delete
+#                    mirrors site/ here — point it at a directory used ONLY by this site)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'docs/demo.gif'
+      - 'docs/screenshots/**'
+      - '.github/workflows/deploy-site.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+    steps:
+      - name: Check deploy secrets
+        id: guard
+        run: |
+          if [ -z "$DEPLOY_HOST" ]; then
+            echo "Deploy secrets not configured — skipping site deploy."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.configured == 'true'
+
+      # site/assets/ is gitignored (originals live in docs/); rebuild it here.
+      - name: Stage media into site/assets
+        if: steps.guard.outputs.configured == 'true'
+        run: |
+          mkdir -p site/assets/screenshots
+          cp docs/demo.gif site/assets/demo.gif
+          cp docs/screenshots/*.png site/assets/screenshots/
+
+      - name: Set up SSH
+        if: steps.guard.outputs.configured == 'true'
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy with rsync
+        if: steps.guard.outputs.configured == 'true'
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes" \
+            site/ "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"

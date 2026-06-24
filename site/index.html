@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Purr Pause — 软提醒，让一只猫陪你做 20-20-20</title>
+  <meta name="description" content="Purr Pause 是一款免费、开源、零打扰的 Windows 护眼提醒小工具。每工作 20 分钟，一只猫温柔地走过屏幕，提醒你抬头远眺 20 秒。" />
+  <meta name="theme-color" content="#1f8f78" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐱</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- 同步加 .js 类：保证关闭 JS 时所有内容默认可见（不依赖滚动揭示） -->
+  <script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+
+  <!-- ============ 顶部导航 ============ -->
+  <nav class="nav">
+    <div class="container nav-inner">
+      <a class="nav-brand" href="#top"><span class="nav-logo">🐱</span> Purr Pause</a>
+      <div class="nav-links">
+        <a href="#features">功能</a>
+        <a href="#privacy">隐私</a>
+        <a href="#faq">常见问题</a>
+        <a class="btn btn-sm" data-download href="https://github.com/David-Zhang-YB/purr-pause/releases/latest" rel="noopener">下载</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ============ Hero ============ -->
+  <header class="hero" id="top">
+    <div class="container hero-inner">
+      <div class="logo">🐱</div>
+      <h1>让一只猫，<br />提醒你的眼睛休息。</h1>
+      <p class="tagline">Purr Pause 是一款免费、开源、零打扰的 Windows 护眼小工具。<br class="br-desktop" />每工作 20 分钟，一只猫温柔地走过屏幕，提醒你抬头远眺。</p>
+      <div class="cta">
+        <a class="btn btn-primary btn-lg" data-download href="https://github.com/David-Zhang-YB/purr-pause/releases/latest" rel="noopener">⬇ 下载 Windows 版</a>
+        <p class="cta-meta">
+          <span data-version>最新版本 v0.1.2</span> · Windows 10 / 11 · 免费 · 开源
+        </p>
+      </div>
+    </div>
+
+    <!-- 产品大图：放进一个圆角"窗口"框 -->
+    <div class="container hero-media reveal">
+      <div class="mockup">
+        <div class="mockup-bar">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="mockup-title">Purr Pause · 休息时间到</span>
+        </div>
+        <img src="assets/demo.gif" alt="演示：一只猫温柔地走过屏幕中央" loading="lazy" />
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ============ 为什么需要它 ============ -->
+    <section class="band band-soft">
+      <div class="container narrow center reveal">
+        <h2>为什么需要它</h2>
+        <p class="lead">听说过 <strong>20-20-20 法则</strong> 吗？每工作 20 分钟，看向 20 英尺外的物体 20 秒，可以有效缓解眼疲劳。</p>
+        <p class="lead">但意志力靠不住——所以 Purr Pause 让一只猫每 20 分钟悄悄出现在屏幕中央，温柔地提醒你抬头。</p>
+      </div>
+    </section>
+
+    <!-- ============ 三个理念 ============ -->
+    <section class="band">
+      <div class="container">
+        <div class="cards reveal">
+          <div class="card">
+            <div class="card-icon">🐾</div>
+            <h3>软提醒</h3>
+            <p>猫咪不强制弹窗占满屏幕，只是温柔走过、坐一会儿、再悄然离去。</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">🔒</div>
+            <h3>零打扰</h3>
+            <p>不发请求、不收集数据、不弹广告。一个老老实实的本地工具。</p>
+          </div>
+          <div class="card">
+            <div class="card-icon">✕</div>
+            <h3>可关闭</h3>
+            <p>累了想专心？随时从托盘退出，没有"再坚持 5 分钟"的纠缠。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 功能展示（图文交错） ============ -->
+    <section class="band band-soft" id="features">
+      <div class="container">
+
+        <div class="feature reveal">
+          <div class="feature-text">
+            <h2>温柔地提醒，不打断你</h2>
+            <p>到点时，一张柔和的休息卡片浮现在屏幕中央，配上倒计时和走动的猫咪。它不抢占焦点，时间一到就自己淡出——你甚至可以随手点掉。</p>
+          </div>
+          <div class="feature-media">
+            <div class="frame"><img src="assets/screenshots/rest-notification.png" alt="休息提醒卡片与倒计时" loading="lazy" /></div>
+          </div>
+        </div>
+
+        <div class="feature reverse reveal">
+          <div class="feature-text">
+            <h2>一切都可调</h2>
+            <p>右键托盘 🐱 → 设置，自由调整工作间隔、休息时长，甚至换成你自己的猫——填一张 GIF/PNG 的路径即可。默认值已经够好，但它是你的。</p>
+          </div>
+          <div class="feature-media">
+            <div class="frame"><img src="assets/screenshots/settings-window.png" alt="设置窗口" loading="lazy" /></div>
+          </div>
+        </div>
+
+        <div class="feature reveal">
+          <div class="feature-text">
+            <h2>藏在托盘，随叫随到</h2>
+            <p>平时它安静地待在系统托盘里，一个 🐱 图标。需要时右键即可打开设置或退出，不开机自启、不占用任务栏、不打扰你工作。</p>
+          </div>
+          <div class="feature-media">
+            <div class="frame frame-pad"><img src="assets/screenshots/tray-menu.png" alt="系统托盘菜单" loading="lazy" /></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============ 隐私面板 ============ -->
+    <section class="band" id="privacy">
+      <div class="container">
+        <div class="privacy-panel reveal">
+          <h2>隐私，是默认设置</h2>
+          <p class="lead">Purr Pause 是一个老老实实的本地工具，源码全部开放。下面每一条都可以在 <a href="https://github.com/David-Zhang-YB/purr-pause" rel="noopener">源码</a> 里逐行验证：</p>
+          <ul class="privacy-grid">
+            <li><strong>不联网</strong>v0.1.x 启动后零网络请求——无遥测、无更新检查、无崩溃上报。拔网使用，行为完全一致。</li>
+            <li><strong>不动注册表</strong>运行时代码完全没有注册表读写调用。</li>
+            <li><strong>不开机自启</strong>每次需要你主动启动；卸载就是直接删除 .exe。</li>
+            <li><strong>不删任何文件</strong>运行时从不调用任何文件删除接口。</li>
+            <li><strong>只写一处</strong>所有配置保存在 <code>%APPDATA%\PurrPause\config.json</code>，Windows 标准的每用户配置目录。</li>
+            <li><strong>可自行验证</strong>把 .exe 拖进 <a href="https://www.virustotal.com" rel="noopener">VirusTotal</a> 扫一下也行。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 下载 CTA 条 ============ -->
+    <section class="cta-band">
+      <div class="container center reveal">
+        <h2>给你的眼睛，配一只猫。</h2>
+        <p>免费、开源、不到一分钟就能用上。</p>
+        <a class="btn btn-light btn-lg" data-download href="https://github.com/David-Zhang-YB/purr-pause/releases/latest" rel="noopener">⬇ 下载 Windows 版</a>
+        <p class="cta-meta light"><span data-version>最新版本 v0.1.2</span> · Windows 10 / 11</p>
+      </div>
+    </section>
+
+    <!-- ============ 安装说明 ============ -->
+    <section class="band band-soft" id="install">
+      <div class="container narrow">
+        <h2 class="reveal">下载与安装（Windows 10 / 11）</h2>
+        <ol class="steps reveal">
+          <li>点击 <strong>「下载 Windows 版」</strong>，保存 <code>PurrPause-windows.exe</code>。</li>
+          <li>双击运行。</li>
+          <li>首次启动时，Windows 会显示 <strong>"已保护你的电脑"</strong> 蓝色警告。这是因为本应用未购买代码签名证书——所有未签名的小型独立软件都会出现此提示。</li>
+          <li>点击 <strong>"更多信息" → "仍要运行"</strong> 即可（见下方截图的红圈标注）。</li>
+          <li>启动后应用会驻留在右下角托盘，看到 🐱 图标即表示运行成功。</li>
+        </ol>
+        <div class="frame reveal"><img src="assets/screenshots/smartscreen-bypass.png" alt="SmartScreen 警告与绕过指引" loading="lazy" /></div>
+        <p class="note reveal">下载链接由国内服务器加速分发，速度通常比从 GitHub 直接下载快很多。</p>
+      </div>
+    </section>
+
+    <!-- ============ FAQ ============ -->
+    <section class="band" id="faq">
+      <div class="container narrow">
+        <h2 class="reveal">常见问题</h2>
+        <div class="reveal">
+          <details>
+            <summary>为什么打开时有安全警告？</summary>
+            <p>因为本应用没有购买代码签名证书（每年 $99–300，现阶段不值得）。所有未签名的独立小软件都会触发 Windows SmartScreen 提示，点 "更多信息 → 仍要运行" 即可。源码完全开放，可自行审计。</p>
+          </details>
+          <details>
+            <summary>怎么卸载？</summary>
+            <p>直接删除下载的 <code>.exe</code> 即可，没有安装程序、不写注册表。如需彻底清理配置，再删除 <code>%APPDATA%\PurrPause\</code> 文件夹。</p>
+          </details>
+          <details>
+            <summary>我的数据存在哪里？会上传吗？</summary>
+            <p>不会上传。所有配置只保存在你本机的 <code>%APPDATA%\PurrPause\config.json</code>。v0.1.x 运行时不发起任何网络请求。</p>
+          </details>
+          <details>
+            <summary>支持 macOS 吗？</summary>
+            <p>macOS 版本目前暂未发布，将在后续小版本中补充。Mac 用户现在可以从 <a href="https://github.com/David-Zhang-YB/purr-pause" rel="noopener">源码</a> 运行。</p>
+          </details>
+          <details>
+            <summary>可以换成自己的猫吗？</summary>
+            <p>可以。右键托盘 🐱 → "设置"，填写任意 GIF/PNG 的绝对路径，即可替换休息卡片左侧的缩略图。还能调整工作间隔与休息时长。</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ 页脚 ============ -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand"><span class="nav-logo">🐱</span> Purr Pause</div>
+      <p class="footer-links">
+        <a href="https://github.com/David-Zhang-YB/purr-pause" rel="noopener">GitHub</a> ·
+        <a href="https://github.com/David-Zhang-YB/purr-pause/blob/main/README.en.md" rel="noopener">English</a> ·
+        <a href="https://github.com/David-Zhang-YB/purr-pause/issues" rel="noopener">反馈 Issues</a> ·
+        <a href="mailto:yubo.david.zhang@gmail.com">邮箱</a>
+      </p>
+      <p class="footer-meta">MIT License © 2026 Yubo Zhang</p>
+      <!-- ICP 备案号占位：备案下来后替换下面整行 -->
+      <p class="footer-icp"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">{{ICP_BEIAN_NUMBER}}</a></p>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>
