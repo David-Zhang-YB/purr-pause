@@ -114,7 +114,7 @@ python scripts/build_dist.py
 
 ## 致谢
 
-- 猫咪原始视频：[SeedDance 2.0](https://www.byteplus.com/seedance) 生成
+- 猫咪原始视频：字节跳动 即梦AI（Jimeng / Dreamina）生成
 - 中文字体：[Noto Sans SC](https://fonts.google.com/noto/specimen/Noto+Sans+SC)（SIL OFL 1.1）
 
 完整资源出处见 [ASSETS.md](ASSETS.md)。

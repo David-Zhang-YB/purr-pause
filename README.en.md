@@ -110,7 +110,7 @@ Full history: [CHANGELOG.md](CHANGELOG.md).
 
 ## Credits
 
-- Cat source video: generated with [SeedDance 2.0](https://www.byteplus.com/seedance)
+- Cat source video: generated with ByteDance 即梦AI (Jimeng / Dreamina)
 - Chinese font: [Noto Sans SC](https://fonts.google.com/noto/specimen/Noto+Sans+SC) (SIL OFL 1.1)
 
 Full attribution in [ASSETS.md](ASSETS.md).
